@@ -1,5 +1,8 @@
 # EHItk
 
+[![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/earthhologenome/ehitk)
+
 The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for easily fetching EHI.produced metagenomes, MAGs and related metadata.
 
 It is designed for two common workflows:
