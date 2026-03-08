@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
+from functools import lru_cache
 from pathlib import Path
 import re
 import sqlite3
@@ -9,6 +11,7 @@ from typing import Any, Mapping
 DEFAULT_QUERY_LIMIT = 50
 PACKAGE_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "ehitk.sqlite"
 REPO_CATALOG_PATH = Path(__file__).resolve().parents[2] / "data" / "ehitk.sqlite"
+CUSTOM_COLUMNS_PATH = Path(__file__).resolve().parent / "data" / "custom_columns.json"
 
 MAGS_WITH_SPECIMEN_SOURCE = """
 (
@@ -67,8 +70,8 @@ class QueryValidationError(ValueError):
 @dataclass(frozen=True)
 class TargetConfig:
     source: str
-    default_select: tuple[str, ...]
-    default_headers: tuple[str, ...]
+    query_columns: Mapping[str, str]
+    all_query_headers: tuple[str, ...]
     fetch_select: tuple[str, ...]
     fetch_headers: tuple[str, ...]
     order_by: str
@@ -85,23 +88,49 @@ def _taxonomy_select(column: str, prefix: str, alias: str) -> str:
 TARGETS: dict[str, TargetConfig] = {
     "metagenomes": TargetConfig(
         source="metagenomes_with_specimen",
-        default_select=(
+        query_columns={
+            "metagenome_id": "metagenome_id",
+            "release": "release",
+            "sample_type": "sample_type",
+            "latitude": "latitude",
+            "longitude": "longitude",
+            "country": "country",
+            "date": "date",
+            "url1": "url1",
+            "url2": "url2",
+            "biome": "biome",
+            "specimen_id": "specimen_id",
+            "host_taxid": "host_taxid",
+            "host_species": "host_species",
+            "host_genus": "host_genus",
+            "host_family": "host_family",
+            "host_order": "host_order",
+            "host_class": "host_class",
+            "weight": "weight",
+            "length": "length",
+            "sex": "sex",
+        },
+        all_query_headers=(
             "metagenome_id",
-            "specimen_id",
             "release",
             "sample_type",
-            "host_species",
-            "host_genus",
+            "latitude",
+            "longitude",
+            "country",
+            "date",
+            "url1",
+            "url2",
             "biome",
-        ),
-        default_headers=(
-            "metagenome_id",
             "specimen_id",
-            "release",
-            "sample_type",
+            "host_taxid",
             "host_species",
             "host_genus",
-            "biome",
+            "host_family",
+            "host_order",
+            "host_class",
+            "weight",
+            "length",
+            "sex",
         ),
         fetch_select=(
             "metagenome_id",
@@ -135,27 +164,81 @@ TARGETS: dict[str, TargetConfig] = {
     ),
     "mags": TargetConfig(
         source=MAGS_WITH_SPECIMEN_SOURCE,
-        default_select=(
+        query_columns={
+            "mag_id": "mag_id",
+            "release": "release",
+            "completeness": "completeness",
+            "contamination": "contamination",
+            "size": "size",
+            "gc": "gc",
+            "n50": "n50",
+            "contigs": "contigs",
+            "mag_domain": "mag_domain",
+            "mag_phylum": "mag_phylum",
+            "mag_class": "mag_class",
+            "mag_order": "mag_order",
+            "mag_family": "mag_family",
+            "mag_genus": _taxonomy_select("mag_genus", "g__", "mag_genus"),
+            "url": "url",
+            "mag_species": _taxonomy_select("mag_species", "s__", "mag_species"),
+            "metagenome_id": "metagenome_id",
+            "metagenome_release": "metagenome_release",
+            "sample_type": "sample_type",
+            "latitude": "latitude",
+            "longitude": "longitude",
+            "country": "country",
+            "date": "date",
+            "url1": "url1",
+            "url2": "url2",
+            "biome": "biome",
+            "specimen_id": "specimen_id",
+            "host_taxid": "host_taxid",
+            "host_species": "host_species",
+            "host_genus": "host_genus",
+            "host_family": "host_family",
+            "host_order": "host_order",
+            "host_class": "host_class",
+            "weight": "weight",
+            "length": "length",
+            "sex": "sex",
+        },
+        all_query_headers=(
             "mag_id",
-            "metagenome_id",
-            "specimen_id",
-            "host_species",
-            "completeness",
-            "contamination",
-            _taxonomy_select("mag_genus", "g__", "mag_genus"),
-            _taxonomy_select("mag_species", "s__", "mag_species"),
             "release",
-        ),
-        default_headers=(
-            "mag_id",
-            "metagenome_id",
-            "specimen_id",
-            "host_species",
             "completeness",
             "contamination",
+            "size",
+            "gc",
+            "n50",
+            "contigs",
+            "mag_domain",
+            "mag_phylum",
+            "mag_class",
+            "mag_order",
+            "mag_family",
             "mag_genus",
+            "url",
             "mag_species",
-            "release",
+            "metagenome_id",
+            "metagenome_release",
+            "sample_type",
+            "latitude",
+            "longitude",
+            "country",
+            "date",
+            "url1",
+            "url2",
+            "biome",
+            "specimen_id",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "host_family",
+            "host_order",
+            "host_class",
+            "weight",
+            "length",
+            "sex",
         ),
         fetch_select=(
             "mag_id",
@@ -193,18 +276,28 @@ TARGETS: dict[str, TargetConfig] = {
     ),
     "specimens": TargetConfig(
         source="specimens",
-        default_select=(
+        query_columns={
+            "specimen_id": "specimen_id",
+            "host_taxid": "host_taxid",
+            "host_species": "host_species",
+            "host_genus": "host_genus",
+            "host_family": "host_family",
+            "host_order": "host_order",
+            "host_class": "host_class",
+            "weight": "weight",
+            "length": "length",
+            "sex": "sex",
+        },
+        all_query_headers=(
             "specimen_id",
             "host_taxid",
             "host_species",
             "host_genus",
-            "sex",
-        ),
-        default_headers=(
-            "specimen_id",
-            "host_taxid",
-            "host_species",
-            "host_genus",
+            "host_family",
+            "host_order",
+            "host_class",
+            "weight",
+            "length",
             "sex",
         ),
         fetch_select=(
@@ -253,9 +346,80 @@ def catalog_path_from_context(ctx: Any) -> Path:
     return default_catalog_path()
 
 
-def headers_for(target: str, *, fetch: bool = False) -> tuple[str, ...]:
+@lru_cache(maxsize=1)
+def _custom_query_headers() -> dict[str, dict[str, tuple[str, ...]]]:
+    with CUSTOM_COLUMNS_PATH.open("r", encoding="utf-8") as handle:
+        raw = json.load(handle)
+    return {
+        target: {preset: tuple(columns) for preset, columns in presets.items()}
+        for target, presets in raw.items()
+    }
+
+
+def headers_for(
+    target: str,
+    *,
+    fetch: bool = False,
+    columns: str | None = None,
+) -> tuple[str, ...]:
     config = TARGETS[target]
-    return config.fetch_headers if fetch else config.default_headers
+    if fetch:
+        return config.fetch_headers
+    return resolve_query_headers(target, columns)
+
+
+def resolve_query_headers(target: str, columns: str | None = None) -> tuple[str, ...]:
+    config = TARGETS[target]
+    custom_headers = _custom_query_headers().get(target)
+    if custom_headers is None:
+        raise QueryValidationError(f"No custom columns configured for target: {target}.")
+
+    if columns is None:
+        return custom_headers["default"]
+
+    keyword = columns.strip().lower()
+    if not keyword:
+        raise QueryValidationError("The --columns option must not be empty.")
+
+    if keyword == "all":
+        return config.all_query_headers
+
+    if "," not in columns:
+        if keyword in custom_headers:
+            return custom_headers[keyword]
+
+        known_presets = {
+            preset_name
+            for presets in _custom_query_headers().values()
+            for preset_name in presets.keys()
+        }
+        if keyword in known_presets:
+            available_presets = ", ".join(sorted(custom_headers.keys()))
+            raise QueryValidationError(
+                f"Column preset '{keyword}' is not available for {target}. "
+                f"Available presets: {available_presets}."
+            )
+
+    requested_headers = tuple(
+        column.strip() for column in columns.split(",") if column.strip()
+    )
+
+    invalid_columns = [
+        column for column in requested_headers if column not in config.query_columns
+    ]
+    if invalid_columns:
+        available = ", ".join(config.all_query_headers)
+        invalid = ", ".join(invalid_columns)
+        raise QueryValidationError(
+            f"Unknown columns for {target}: {invalid}. Available columns: {available}."
+        )
+
+    return requested_headers
+
+
+def select_expressions_for(target: str, headers: tuple[str, ...]) -> tuple[str, ...]:
+    config = TARGETS[target]
+    return tuple(config.query_columns[header] for header in headers)
 
 
 def _normalized_taxonomy_expr(column: str, prefix: str) -> str:
@@ -372,12 +536,17 @@ def build_query(
     where: str | None = None,
     limit: int | None = None,
     fetch: bool = False,
+    columns: str | None = None,
 ) -> tuple[str, list[Any]]:
     if target not in TARGETS:
         raise QueryValidationError(f"Unsupported query target: {target}.")
 
     config = TARGETS[target]
-    selected_columns = config.fetch_select if fetch else config.default_select
+    selected_columns = (
+        config.fetch_select
+        if fetch
+        else select_expressions_for(target, resolve_query_headers(target, columns))
+    )
     conditions, parameters = _build_conditions(target, filters or {})
 
     safe_where = validate_where_clause(where)
@@ -406,6 +575,7 @@ def query_rows(
     where: str | None = None,
     limit: int | None = None,
     fetch: bool = False,
+    columns: str | None = None,
 ) -> list[sqlite3.Row]:
     resolved_catalog = resolve_catalog_path(catalog_path)
     sql, parameters = build_query(
@@ -414,6 +584,7 @@ def query_rows(
         where=where,
         limit=limit,
         fetch=fetch,
+        columns=columns,
     )
 
     with sqlite3.connect(resolved_catalog) as connection:

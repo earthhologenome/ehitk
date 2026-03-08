@@ -4,11 +4,11 @@ from collections import Counter
 from pathlib import Path
 
 from rich.console import Console
-from rich.table import Table
 import typer
 
 from ehitk.download import DownloadJob, destination_for_url, download_jobs
 from ehitk.manifest import ManifestEntry, append_manifest_entry
+from ehitk.output import render_or_export_rows
 from ehitk.query import (
     DEFAULT_QUERY_LIMIT,
     QueryValidationError,
@@ -41,8 +41,26 @@ def query(
         min=1,
         help="Maximum number of rows to print.",
     ),
+    columns: str | None = typer.Option(
+        None,
+        "--columns",
+        help="Query columns to include: default, all, or a comma-separated list.",
+    ),
+    csv: Path | None = typer.Option(
+        None,
+        "--csv",
+        help="Write query results to a CSV file instead of displaying a table.",
+    ),
+    tsv: Path | None = typer.Option(
+        None,
+        "--tsv",
+        help="Write query results to a TSV file instead of displaying a table.",
+    ),
 ) -> None:
     console = Console()
+    if csv is not None and tsv is not None:
+        raise typer.BadParameter("Use only one of --csv or --tsv.")
+
     filters = {
         "host_taxid": host_taxid,
         "host_species": host_species,
@@ -60,11 +78,20 @@ def query(
             where=where,
             limit=limit,
             fetch=False,
+            columns=columns,
         )
     except QueryValidationError as exc:
-        raise typer.BadParameter(str(exc), param_hint="--where") from exc
+        param_hint = "--columns" if "column" in str(exc).lower() else "--where"
+        raise typer.BadParameter(str(exc), param_hint=param_hint) from exc
 
-    _render_rows(console, headers_for("metagenomes"), rows, title="Metagenomes")
+    render_or_export_rows(
+        console,
+        headers_for("metagenomes", columns=columns),
+        rows,
+        title="Metagenomes",
+        csv_path=csv,
+        tsv_path=tsv,
+    )
 
 
 @app.command()
@@ -190,28 +217,6 @@ def fetch(
         console=console,
     )
     _print_fetch_summary(console, results)
-
-
-def _render_rows(
-    console: Console,
-    headers: tuple[str, ...],
-    rows: list[dict],
-    *,
-    title: str,
-) -> None:
-    if not rows:
-        console.print(f"No matching {title.lower()} found.")
-        return
-
-    table = Table(title=title)
-    for header in headers:
-        table.add_column(header)
-
-    for row in rows:
-        table.add_row(*(str(row[header]) if row[header] is not None else "" for header in headers))
-
-    console.print(table)
-
 
 def _print_fetch_summary(console: Console, results: list) -> None:
     if not results:

@@ -1,4 +1,11 @@
-from ehitk.query import QueryValidationError, build_query, default_catalog_path, query_rows, validate_where_clause
+from ehitk.query import (
+    QueryValidationError,
+    build_query,
+    default_catalog_path,
+    headers_for,
+    query_rows,
+    validate_where_clause,
+)
 
 
 def test_validate_where_clause_rejects_semicolon() -> None:
@@ -65,3 +72,48 @@ def test_query_rows_returns_mags_with_host_taxonomy() -> None:
     )
     assert rows
     assert rows[0]["host_species"] == "Sciurus carolinensis"
+
+
+def test_headers_for_columns_default_and_all() -> None:
+    assert headers_for("metagenomes") == (
+        "metagenome_id",
+        "specimen_id",
+        "release",
+        "sample_type",
+        "host_species",
+        "host_genus",
+        "biome",
+    )
+    assert "host_class" in headers_for("metagenomes", columns="all")
+    assert headers_for("metagenomes", columns="url") == (
+        "metagenome_id",
+        "url1",
+        "url2",
+    )
+    assert headers_for("mags", columns="url") == ("mag_id", "url")
+
+
+def test_build_query_with_explicit_columns() -> None:
+    sql, _ = build_query(
+        "mags",
+        filters={"host_species": "Sciurus carolinensis"},
+        columns="mag_id,host_species,mag_genus",
+        limit=1,
+    )
+    assert "SELECT mag_id, host_species, CASE WHEN mag_genus LIKE 'g__%'" in sql
+
+
+def test_build_query_rejects_unknown_columns() -> None:
+    try:
+        build_query("specimens", columns="specimen_id,unknown_column")
+    except QueryValidationError:
+        return
+    raise AssertionError("Expected QueryValidationError for unknown columns")
+
+
+def test_build_query_rejects_unsupported_column_preset() -> None:
+    try:
+        build_query("specimens", columns="url")
+    except QueryValidationError:
+        return
+    raise AssertionError("Expected QueryValidationError for unsupported preset")

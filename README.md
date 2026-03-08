@@ -92,6 +92,7 @@ Supported metagenome filters:
 - `--sample-type`
 - `--biome`
 - `--release`
+- `--columns`
 - `--where`
 - `--limit`
 
@@ -124,6 +125,7 @@ Supported MAG filters:
 - `--host-lineage`
 - `--release`
 - `--metagenome-id`
+- `--columns`
 - `--where`
 - `--limit`
 
@@ -154,6 +156,7 @@ Supported specimen filters:
 - `--host-species`
 - `--host-lineage`
 - `--sex`
+- `--columns`
 - `--where`
 - `--limit`
 
@@ -164,6 +167,41 @@ ehitk specimens query --specimen-id SD00508
 ehitk specimens query --host-species "Podarcis muralis"
 ehitk specimens query --host-lineage Mammalia --sex Female
 ```
+
+## Controlling Query Columns
+
+All `query` commands support `--columns`:
+
+- `--columns default`: use the configured default columns for that command
+- `--columns all`: include every available column in the query target
+- `--columns url`: use the URL-focused preset for `metagenomes` and `mags`
+- `--columns a,b,c`: include only the named columns
+
+These examples are equivalent:
+
+```bash
+ehitk metagenomes query --host-species "Podarcis muralis"
+ehitk metagenomes query --host-species "Podarcis muralis" --columns default
+```
+
+Examples:
+
+```bash
+ehitk metagenomes query --columns url --csv metagenome_urls.csv
+ehitk mags query --columns all --limit 1
+ehitk mags query --columns url --tsv mag_urls.tsv
+ehitk mags query --columns mag_id,host_species,mag_genus --limit 5
+ehitk specimens query --columns specimen_id,host_species,sex --csv specimens.csv
+```
+
+Column presets are configured in `src/ehitk/data/custom_columns.json`.
+
+The `url` preset is only available for:
+
+- `metagenomes`
+- `mags`
+
+It is not available for `specimens`.
 
 ## Advanced SQL Filtering
 

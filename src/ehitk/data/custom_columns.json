@@ -1,0 +1,43 @@
+{
+  "metagenomes": {
+    "default": [
+      "metagenome_id",
+      "specimen_id",
+      "release",
+      "sample_type",
+      "host_species",
+      "biome"
+    ],
+    "url": [
+      "metagenome_id",
+      "url1",
+      "url2"
+    ]
+  },
+  "mags": {
+    "default": [
+      "mag_id",
+      "metagenome_id",
+      "specimen_id",
+      "host_species",
+      "completeness",
+      "contamination",
+      "mag_genus",
+      "mag_species",
+      "release"
+    ],
+    "url": [
+      "mag_id",
+      "url"
+    ]
+  },
+  "specimens": {
+    "default": [
+      "specimen_id",
+      "host_taxid",
+      "host_species",
+      "host_order",
+      "sex"
+    ]
+  }
+}
