@@ -1,4 +1,6 @@
+import json
 from pathlib import Path
+import re
 
 from typer.testing import CliRunner
 
@@ -6,6 +8,17 @@ from ehitk import __version__
 from ehitk.cli import app
 
 runner = CliRunner()
+ANSI_PATTERN = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+
+
+def _strip_ansi(text: str) -> str:
+    return ANSI_PATTERN.sub("", text)
+
+
+def _default_columns(target: str) -> tuple[str, ...]:
+    custom_columns_path = Path("src/ehitk/data/custom_columns.json")
+    raw = json.loads(custom_columns_path.read_text(encoding="utf-8"))
+    return tuple(raw[target]["default"])
 
 
 def test_root_command_shows_overview_in_fixed_order() -> None:
@@ -23,16 +36,17 @@ def test_root_command_shows_overview_in_fixed_order() -> None:
 
 def test_root_help_shows_db_and_hides_completion_options() -> None:
     result = runner.invoke(app, ["--help"])
+    output = _strip_ansi(result.output)
     assert result.exit_code == 0
-    assert "--db" in result.output
-    assert "--version" in result.output
-    assert "--catalog" not in result.output
-    assert "--install-completion" not in result.output
-    assert "--show-completion" not in result.output
+    assert "--db" in output
+    assert "--version" in output
+    assert "--catalog" not in output
+    assert "--install-completion" not in output
+    assert "--show-completion" not in output
 
-    specimens_index = result.output.index("specimens")
-    metagenomes_index = result.output.index("metagenomes")
-    mags_index = result.output.index("mags")
+    specimens_index = output.index("specimens")
+    metagenomes_index = output.index("metagenomes")
+    mags_index = output.index("mags")
     assert specimens_index < metagenomes_index < mags_index
 
 
@@ -192,9 +206,7 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
     assert implicit_result.exit_code == 0
     assert default_output_path.read_text(encoding="utf-8") == implicit_output_path.read_text(encoding="utf-8")
     contents = default_output_path.read_text(encoding="utf-8").splitlines()
-    assert contents[0] == (
-        "metagenome_id,specimen_id,release,sample_type,host_species,host_genus,biome"
-    )
+    assert contents[0] == ",".join(_default_columns("metagenomes"))
 
 
 def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:
