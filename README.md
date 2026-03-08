@@ -40,17 +40,23 @@ ehitk --help
 
 ```text
 ehitk
+├─ specimens
+│  └─ query
 ├─ metagenomes
 │  ├─ query
 │  └─ fetch
-├─ mags
-│  ├─ query
-│  └─ fetch
-└─ specimens
-   └─ query
+└─ mags
+   ├─ query
+   └─ fetch
 ```
 
 ## Quick Start
+
+Query specimens:
+
+```bash
+ehitk specimens query --host-species "Podarcis muralis" --limit 5
+```
 
 Query metagenomes:
 
@@ -64,22 +70,16 @@ Query MAGs:
 ehitk mags query --genus Escherichia --limit 5
 ```
 
-Query specimens:
+Fetch one metagenome:
 
 ```bash
-ehitk specimens query --host-species "Podarcis muralis" --limit 5
+ehitk metagenomes fetch --host-lineage Reptilia --limit 1
 ```
 
 Fetch one MAG:
 
 ```bash
 ehitk mags fetch --species "Escherichia coli" --limit 1
-```
-
-Fetch one metagenome:
-
-```bash
-ehitk metagenomes fetch --host-lineage Reptilia --limit 1
 ```
 
 ## Querying Metagenomes
@@ -139,13 +139,6 @@ ehitk mags query --metagenome-id EHI00392
 
 MAG taxonomy values in the catalog may use GTDB-style prefixes such as `g__` and `s__`. EHItk normalizes those during filtering and display, so `--genus Escherichia` matches `g__Escherichia`.
 
-MAG queries and fetches can also use host taxonomy through the MAG → metagenome → specimen join path:
-
-```bash
-ehitk mags query --host-species "Sciurus carolinensis"
-ehitk mags query --host-lineage Mammalia
-```
-
 Derived MAG quality classes are defined as:
 
 - `high`: `completeness >= 90` and `contamination <= 5`
@@ -204,7 +197,6 @@ For safety, EHItk rejects predicates containing:
 
 `ehitk metagenomes fetch` downloads paired-end reads from `url1` and `url2`.
 
-- both URLs must be present
 - records with missing read URLs are skipped
 - files are written under `downloads/metagenomes/<metagenome_id>/`
 
@@ -269,30 +261,3 @@ Possible statuses include:
 - `failed`
 
 Checksums are SHA-256 digests of the downloaded local file.
-
-## Catalog Notes
-
-The catalog now contains three linked entity layers:
-
-- `specimens`: host taxonomy and specimen metadata
-- `metagenomes`: collection metadata and read URLs, linked to `specimen_id`
-- `mags`: MAG metadata and MAG FASTA URLs, linked to `metagenome_id`
-
-EHItk resolves host taxonomy from:
-
-- metagenomes via `metagenomes_with_specimen`
-- MAGs via a join from `mags` to `metagenomes_with_specimen`
-
-## Development
-
-Run tests:
-
-```bash
-python3 -m pytest
-```
-
-Run the CLI without installing:
-
-```bash
-PYTHONPATH=src python3 -m ehitk.cli --help
-```
