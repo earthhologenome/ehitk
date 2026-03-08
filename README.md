@@ -58,13 +58,16 @@ ehitk metagenomes query --db /path/to/ehitk.sqlite --limit 5
 [ehitk]
 ├─ * specimens *
 │  ├─ query
+│  ├─ values
 │  └─ stats
 ├─ * metagenomes *
 │  ├─ query
+│  ├─ values
 │  ├─ stats
 │  └─ fetch
 └─ * mags *
    ├─ query
+   ├─ values
    ├─ stats
    └─ fetch
 ```
@@ -77,16 +80,34 @@ Query specimens:
 ehitk specimens query --host-species "Podarcis muralis" --limit 5
 ```
 
+Explore specimen filter values:
+
+```bash
+ehitk specimens values --field host_species --limit 10
+```
+
 Query metagenomes:
 
 ```bash
 ehitk metagenomes query --host-species "Podarcis muralis" --limit 5
 ```
 
+Explore metagenome values:
+
+```bash
+ehitk metagenomes values --field country --limit 10
+```
+
 Query MAGs:
 
 ```bash
 ehitk mags query --genus Escherichia --limit 5
+```
+
+Explore MAG values:
+
+```bash
+ehitk mags values --field genus --limit 10
 ```
 
 Summarize MAGs:
@@ -172,6 +193,13 @@ Metagenome summary statistics:
 ehitk metagenomes stats --host-species "Podarcis muralis"
 ```
 
+Metagenome value summaries:
+
+```bash
+ehitk metagenomes values --field host_species
+ehitk metagenomes values --field country --limit 20
+```
+
 ## Querying MAGs
 
 Supported MAG filters:
@@ -227,6 +255,13 @@ ehitk mags stats --quality high --species "Escherichia coli"
 ehitk mags stats --host-species "Sciurus carolinensis"
 ```
 
+MAG value summaries:
+
+```bash
+ehitk mags values --field genus
+ehitk mags values --field quality
+```
+
 ## Querying Specimens
 
 Supported specimen filters:
@@ -260,6 +295,15 @@ Specimen summary statistics:
 ```bash
 ehitk specimens stats --host-lineage Reptilia
 ```
+
+Specimen value summaries:
+
+```bash
+ehitk specimens values --field host_order
+ehitk specimens values --field sex --csv specimen-sex-values.csv
+```
+
+`values` prints distinct values with counts for a chosen field after applying any other filters. For MAGs, `--field genus`, `--field species`, and `--field quality` are supported aliases.
 
 ## Controlling Query Columns
 

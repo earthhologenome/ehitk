@@ -75,6 +75,7 @@ class TargetConfig:
     fetch_select: tuple[str, ...]
     fetch_headers: tuple[str, ...]
     order_by: str
+    primary_id: str
 
 
 def _taxonomy_select(column: str, prefix: str, alias: str) -> str:
@@ -161,6 +162,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url2",
         ),
         order_by="metagenome_id",
+        primary_id="metagenome_id",
     ),
     "mags": TargetConfig(
         source=MAGS_WITH_SPECIMEN_SOURCE,
@@ -273,6 +275,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url",
         ),
         order_by="mag_id",
+        primary_id="mag_id",
     ),
     "specimens": TargetConfig(
         source="specimens",
@@ -325,8 +328,21 @@ TARGETS: dict[str, TargetConfig] = {
             "sex",
         ),
         order_by="specimen_id",
+        primary_id="specimen_id",
     ),
 }
+
+VALUE_FIELD_ALIASES: dict[str, dict[str, str]] = {
+    "metagenomes": {},
+    "mags": {
+        "genus": "mag_genus",
+        "species": "mag_species",
+        "quality": "quality",
+    },
+    "specimens": {},
+}
+
+JSON_ARRAY_VALUE_FIELDS = {"weight", "length"}
 
 
 def default_catalog_path() -> Path:
@@ -458,6 +474,63 @@ def _mag_quality_clause(quality: str) -> str:
     if quality_name == "low":
         return "NOT (completeness >= 50 AND contamination <= 10)"
     raise QueryValidationError(f"Unsupported MAG quality value: {quality}.")
+
+
+def _mag_quality_value_expr() -> str:
+    return (
+        "CASE "
+        "WHEN completeness >= 90 AND contamination <= 5 THEN 'high' "
+        "WHEN completeness >= 50 AND contamination <= 10 THEN 'medium' "
+        "ELSE 'low' END"
+    )
+
+
+def available_value_fields(target: str) -> tuple[str, ...]:
+    if target not in TARGETS:
+        raise QueryValidationError(f"Unsupported query target: {target}.")
+
+    fields = list(TARGETS[target].all_query_headers)
+    for alias in VALUE_FIELD_ALIASES.get(target, {}):
+        if alias not in fields:
+            fields.append(alias)
+    return tuple(fields)
+
+
+def resolve_value_field(target: str, field: str) -> str:
+    if target not in TARGETS:
+        raise QueryValidationError(f"Unsupported query target: {target}.")
+
+    candidate = field.strip()
+    if not candidate:
+        raise QueryValidationError("The --field option must not be empty.")
+
+    canonical = VALUE_FIELD_ALIASES.get(target, {}).get(candidate, candidate)
+    if canonical == "quality" and target == "mags":
+        return canonical
+    if canonical in TARGETS[target].all_query_headers:
+        return canonical
+
+    available = ", ".join(available_value_fields(target))
+    raise QueryValidationError(
+        f"Unknown values field for {target}: {field}. Available fields: {available}."
+    )
+
+
+def value_expression_for(target: str, field: str) -> tuple[str, bool]:
+    canonical = resolve_value_field(target, field)
+    if canonical == "mag_genus":
+        return _normalized_taxonomy_expr("mag_genus", "g__"), False
+    if canonical == "mag_species":
+        return _normalized_taxonomy_expr("mag_species", "s__"), False
+    if canonical == "quality":
+        return _mag_quality_value_expr(), False
+    return canonical, canonical in JSON_ARRAY_VALUE_FIELDS
+
+
+def primary_id_for(target: str) -> str:
+    if target not in TARGETS:
+        raise QueryValidationError(f"Unsupported query target: {target}.")
+    return TARGETS[target].primary_id
 
 
 def validate_where_clause(where: str | None) -> str | None:

@@ -227,6 +227,54 @@ def test_mags_query_cli_with_host_filter() -> None:
     assert "EHM" in result.stdout
 
 
+def test_metagenomes_values_cli() -> None:
+    result = runner.invoke(
+        app,
+        ["metagenomes", "values", "--field", "host_species", "--limit", "3"],
+    )
+    assert result.exit_code == 0
+    assert "value" in result.output.lower()
+    assert "count" in result.output.lower()
+
+
+def test_mags_values_cli_supports_field_alias() -> None:
+    result = runner.invoke(
+        app,
+        ["mags", "values", "--field", "genus", "--limit", "3"],
+    )
+    assert result.exit_code == 0
+    assert "g__" not in result.output
+
+
+def test_specimens_values_cli_writes_csv(tmp_path) -> None:
+    output_path = tmp_path / "specimen-values.csv"
+    result = runner.invoke(
+        app,
+        [
+            "specimens",
+            "values",
+            "--field",
+            "sex",
+            "--limit",
+            "5",
+            "--csv",
+            str(output_path),
+        ],
+    )
+    assert result.exit_code == 0
+    contents = output_path.read_text(encoding="utf-8").splitlines()
+    assert contents[0] == "value,count"
+
+
+def test_values_cli_rejects_unknown_field() -> None:
+    result = runner.invoke(
+        app,
+        ["mags", "values", "--field", "nope"],
+    )
+    assert result.exit_code != 0
+    assert "Unknown values field for mags: nope." in result.output
+
+
 def test_metagenomes_query_cli_supports_metagenome_id_flag_with_multiple_values(tmp_path) -> None:
     samples = _sample_rows(
         """
