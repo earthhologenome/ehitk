@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ehitk"
-version = "0.3"
+version = "0.3.1"
 description = "Earth Hologenome Initiative Toolkit"
 readme = "README.md"
 requires-python = ">=3.10"

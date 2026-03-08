@@ -1,8 +1,25 @@
 from typer.testing import CliRunner
 
+from ehitk import __version__
 from ehitk.cli import app
 
 runner = CliRunner()
+
+
+def test_root_help_shows_db_and_hides_completion_options() -> None:
+    result = runner.invoke(app, ["--help"])
+    assert result.exit_code == 0
+    assert "--db" in result.output
+    assert "--version" in result.output
+    assert "--catalog" not in result.output
+    assert "--install-completion" not in result.output
+    assert "--show-completion" not in result.output
+
+
+def test_root_version_option() -> None:
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert __version__ in result.output
 
 
 def test_metagenomes_query_cli() -> None:

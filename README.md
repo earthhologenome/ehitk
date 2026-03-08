@@ -36,6 +36,18 @@ Show the top-level help:
 ehitk --help
 ```
 
+Show the installed version:
+
+```bash
+ehitk --version
+```
+
+Use a specific SQLite database file:
+
+```bash
+ehitk --db /path/to/ehitk.sqlite --help
+```
+
 ## Command Structure
 
 ```text
