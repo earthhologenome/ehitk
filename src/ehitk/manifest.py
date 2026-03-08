@@ -9,22 +9,24 @@ from pathlib import Path
 @dataclass(frozen=True)
 class ManifestEntry:
     entry_type: str
-    genome_id: str
+    id_field: str
+    id_value: str
     url: str | None
     path: str | None
     checksum: str | None
     status: str
 
     def as_dict(self) -> dict[str, str | None]:
-        return {
+        payload: dict[str, str | None] = {
             "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "type": self.entry_type,
-            "genome_id": self.genome_id,
             "url": self.url,
             "path": self.path,
             "checksum": self.checksum,
             "status": self.status,
         }
+        payload[self.id_field] = self.id_value
+        return payload
 
 
 def append_manifest_entry(manifest_path: str | Path, entry: ManifestEntry) -> None:
@@ -34,4 +36,3 @@ def append_manifest_entry(manifest_path: str | Path, entry: ManifestEntry) -> No
     with path.open("a", encoding="utf-8") as handle:
         json.dump(entry.as_dict(), handle, ensure_ascii=True)
         handle.write("\n")
-

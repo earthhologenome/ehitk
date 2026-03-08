@@ -168,7 +168,8 @@ def fetch(
                 manifest_path,
                 ManifestEntry(
                     entry_type="metagenome",
-                    genome_id=metagenome_id,
+                    id_field="metagenome_id",
+                    id_value=metagenome_id,
                     url=None,
                     path=None,
                     checksum=None,
@@ -182,7 +183,8 @@ def fetch(
         jobs.append(
             DownloadJob(
                 entry_type="metagenome",
-                genome_id=metagenome_id,
+                id_field="metagenome_id",
+                id_value=metagenome_id,
                 url=url1,
                 destination=destination_for_url(
                     base_directory,
@@ -194,7 +196,8 @@ def fetch(
         jobs.append(
             DownloadJob(
                 entry_type="metagenome",
-                genome_id=metagenome_id,
+                id_field="metagenome_id",
+                id_value=metagenome_id,
                 url=url2,
                 destination=destination_for_url(
                     base_directory,

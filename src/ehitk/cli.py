@@ -70,12 +70,12 @@ def _print_root_overview(database_path: Path) -> None:
         )
     )
     console.print(
-        "Query, summarize, and fetch specimens, metagenomes, and MAGs from a local SQLite database."
+        "Query, summarize, and fetch specimens, metagenomes, and MAGs from the EHI."
     )
     console.print()
 
     summary = _catalog_summary(database_path)
-    table = Table(title="Catalog Snapshot")
+    table = Table(title="Database Snapshot")
     table.add_column("Level")
     table.add_column("Records", justify="right")
     table.add_column("Summary")

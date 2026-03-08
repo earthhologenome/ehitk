@@ -181,7 +181,8 @@ def fetch(
                 manifest_path,
                 ManifestEntry(
                     entry_type="mag",
-                    genome_id=mag_id,
+                    id_field="mag_id",
+                    id_value=mag_id,
                     url=None,
                     path=None,
                     checksum=None,
@@ -195,7 +196,8 @@ def fetch(
         jobs.append(
             DownloadJob(
                 entry_type="mag",
-                genome_id=mag_id,
+                id_field="mag_id",
+                id_value=mag_id,
                 url=url,
                 destination=destination_for_url(
                     base_directory,

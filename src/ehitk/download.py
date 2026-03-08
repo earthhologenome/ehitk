@@ -26,7 +26,8 @@ CHUNK_SIZE = 1024 * 1024
 @dataclass(frozen=True)
 class DownloadJob:
     entry_type: str
-    genome_id: str
+    id_field: str
+    id_value: str
     url: str
     destination: Path
 
@@ -75,7 +76,8 @@ def download_jobs(
                 manifest_path,
                 ManifestEntry(
                     entry_type=job.entry_type,
-                    genome_id=job.genome_id,
+                    id_field=job.id_field,
+                    id_value=job.id_value,
                     url=job.url,
                     path=str(job.destination),
                     checksum=result.checksum,
@@ -172,4 +174,3 @@ def _parse_total_size(raw_value: object) -> int | None:
     except (TypeError, ValueError):
         return None
     return size if size >= 0 else None
-

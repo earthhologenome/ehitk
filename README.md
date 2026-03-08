@@ -51,15 +51,15 @@ ehitk --db /path/to/ehitk.sqlite --help
 ## Command Structure
 
 ```text
-ehitk
-├─ specimens
+[ehitk]
+├─ * specimens *
 │  ├─ query
 │  └─ stats
-├─ metagenomes
+├─ * metagenomes *
 │  ├─ query
 │  ├─ stats
 │  └─ fetch
-└─ mags
+└─ * mags *
    ├─ query
    ├─ stats
    └─ fetch
@@ -323,13 +323,18 @@ Typical fields:
 {
   "timestamp": "2026-03-06T15:49:23.422576Z",
   "type": "metagenome",
-  "genome_id": "EHI00366",
+  "metagenome_id": "EHI00366",
   "url": null,
   "path": null,
   "checksum": null,
   "status": "missing_url"
 }
 ```
+
+The identifier field is entity-specific:
+
+- metagenome entries use `metagenome_id`
+- MAG entries use `mag_id`
 
 Possible statuses include:
 

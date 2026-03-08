@@ -26,7 +26,9 @@ def test_root_command_shows_overview_in_fixed_order() -> None:
     assert result.exit_code == 0
     assert "Earth Hologenome Initiative ToolKit" in result.output
     assert "Query, summarize, and fetch specimens, metagenomes, and MAGs" in result.output
-    assert "Catalog Snapshot" in result.output
+    assert "Level" in result.output
+    assert "Records" in result.output
+    assert "Summary" in result.output
 
     specimens_index = result.output.rindex("Specimens")
     metagenomes_index = result.output.rindex("Metagenomes")
