@@ -8,6 +8,51 @@ from typing import Any, Mapping
 
 DEFAULT_QUERY_LIMIT = 50
 PACKAGE_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "ehitk.sqlite"
+REPO_CATALOG_PATH = Path(__file__).resolve().parents[2] / "data" / "ehitk.sqlite"
+
+MAGS_WITH_SPECIMEN_SOURCE = """
+(
+    SELECT
+        m."mag_id",
+        m."release",
+        m."completeness",
+        m."contamination",
+        m."size",
+        m."gc",
+        m."n50",
+        m."contigs",
+        m."mag_domain",
+        m."mag_phylum",
+        m."mag_class",
+        m."mag_order",
+        m."mag_family",
+        m."mag_genus",
+        m."url",
+        m."mag_species",
+        m."metagenome_id",
+        mgws."release" AS "metagenome_release",
+        mgws."sample_type" AS "sample_type",
+        mgws."latitude" AS "latitude",
+        mgws."longitude" AS "longitude",
+        mgws."country" AS "country",
+        mgws."date" AS "date",
+        mgws."url1" AS "url1",
+        mgws."url2" AS "url2",
+        mgws."biome" AS "biome",
+        mgws."specimen_id" AS "specimen_id",
+        mgws."host_taxid" AS "host_taxid",
+        mgws."host_species" AS "host_species",
+        mgws."host_genus" AS "host_genus",
+        mgws."host_family" AS "host_family",
+        mgws."host_order" AS "host_order",
+        mgws."host_class" AS "host_class",
+        mgws."weight" AS "weight",
+        mgws."length" AS "length",
+        mgws."sex" AS "sex"
+    FROM "mags" AS m
+    LEFT JOIN "metagenomes_with_specimen" AS mgws ON m."metagenome_id" = mgws."metagenome_id"
+)
+"""
 
 _BANNED_SQL_PATTERN = re.compile(
     r"\b(?:DROP|DELETE|INSERT|UPDATE|ALTER|ATTACH|PRAGMA)\b",
@@ -39,9 +84,10 @@ def _taxonomy_select(column: str, prefix: str, alias: str) -> str:
 
 TARGETS: dict[str, TargetConfig] = {
     "metagenomes": TargetConfig(
-        source="metagenomes",
+        source="metagenomes_with_specimen",
         default_select=(
             "metagenome_id",
+            "specimen_id",
             "release",
             "sample_type",
             "host_species",
@@ -50,6 +96,7 @@ TARGETS: dict[str, TargetConfig] = {
         ),
         default_headers=(
             "metagenome_id",
+            "specimen_id",
             "release",
             "sample_type",
             "host_species",
@@ -58,6 +105,7 @@ TARGETS: dict[str, TargetConfig] = {
         ),
         fetch_select=(
             "metagenome_id",
+            "specimen_id",
             "release",
             "sample_type",
             "host_species",
@@ -71,6 +119,7 @@ TARGETS: dict[str, TargetConfig] = {
         ),
         fetch_headers=(
             "metagenome_id",
+            "specimen_id",
             "release",
             "sample_type",
             "host_species",
@@ -85,10 +134,12 @@ TARGETS: dict[str, TargetConfig] = {
         order_by="metagenome_id",
     ),
     "mags": TargetConfig(
-        source="mags_with_metagenome",
+        source=MAGS_WITH_SPECIMEN_SOURCE,
         default_select=(
             "mag_id",
             "metagenome_id",
+            "specimen_id",
+            "host_species",
             "completeness",
             "contamination",
             _taxonomy_select("mag_genus", "g__", "mag_genus"),
@@ -98,6 +149,8 @@ TARGETS: dict[str, TargetConfig] = {
         default_headers=(
             "mag_id",
             "metagenome_id",
+            "specimen_id",
+            "host_species",
             "completeness",
             "contamination",
             "mag_genus",
@@ -112,6 +165,12 @@ TARGETS: dict[str, TargetConfig] = {
             "contamination",
             "mag_genus",
             "mag_species",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "host_family",
+            "host_order",
+            "host_class",
             "url",
         ),
         fetch_headers=(
@@ -122,14 +181,64 @@ TARGETS: dict[str, TargetConfig] = {
             "contamination",
             "mag_genus",
             "mag_species",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "host_family",
+            "host_order",
+            "host_class",
             "url",
         ),
         order_by="mag_id",
+    ),
+    "specimens": TargetConfig(
+        source="specimens",
+        default_select=(
+            "specimen_id",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "sex",
+        ),
+        default_headers=(
+            "specimen_id",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "sex",
+        ),
+        fetch_select=(
+            "specimen_id",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "host_family",
+            "host_order",
+            "host_class",
+            "weight",
+            "length",
+            "sex",
+        ),
+        fetch_headers=(
+            "specimen_id",
+            "host_taxid",
+            "host_species",
+            "host_genus",
+            "host_family",
+            "host_order",
+            "host_class",
+            "weight",
+            "length",
+            "sex",
+        ),
+        order_by="specimen_id",
     ),
 }
 
 
 def default_catalog_path() -> Path:
+    if REPO_CATALOG_PATH.exists():
+        return REPO_CATALOG_PATH
     return PACKAGE_CATALOG_PATH
 
 
@@ -212,12 +321,9 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
             )
             parameters.append(_normalize_prefixed_value(value.strip(), prefix))
 
-    if target == "metagenomes":
+    def add_host_taxonomy_filters() -> None:
         add_exact("host_taxid", filters.get("host_taxid"))
         add_exact("host_species", filters.get("host_species"))
-        add_exact("sample_type", filters.get("sample_type"))
-        add_exact("biome", filters.get("biome"))
-        add_exact("release", filters.get("release"))
 
         host_lineage = filters.get("host_lineage")
         if host_lineage:
@@ -233,15 +339,26 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
             )
             parameters.extend([host_lineage.strip()] * len(lineage_columns))
 
+    if target == "metagenomes":
+        add_host_taxonomy_filters()
+        add_exact("sample_type", filters.get("sample_type"))
+        add_exact("biome", filters.get("biome"))
+        add_exact("release", filters.get("release"))
+
     elif target == "mags":
         add_exact("release", filters.get("release"))
         add_exact("metagenome_id", filters.get("metagenome_id"))
+        add_host_taxonomy_filters()
         add_normalized_taxonomy("mag_genus", "g__", filters.get("genus"))
         add_normalized_taxonomy("mag_species", "s__", filters.get("species"))
 
         quality = filters.get("quality")
         if quality:
             conditions.append(_mag_quality_clause(quality))
+    elif target == "specimens":
+        add_exact("specimen_id", filters.get("specimen_id"))
+        add_exact("sex", filters.get("sex"))
+        add_host_taxonomy_filters()
     else:
         raise QueryValidationError(f"Unsupported query target: {target}.")
 

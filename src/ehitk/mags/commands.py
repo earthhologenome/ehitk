@@ -33,6 +33,12 @@ def query(
     quality: MagQuality | None = typer.Option(None, help="Derived MAG quality class."),
     genus: str | None = typer.Option(None, help="Exact MAG genus."),
     species: str | None = typer.Option(None, help="Exact MAG species."),
+    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_species: str | None = typer.Option(None, help="Exact host species name."),
+    host_lineage: str | None = typer.Option(
+        None,
+        help="Exact lineage term matched against host species/genus/family/order/class.",
+    ),
     release: str | None = typer.Option(None, help="Exact MAG release ID."),
     metagenome_id: str | None = typer.Option(None, help="Exact parent metagenome ID."),
     where: str | None = typer.Option(
@@ -50,6 +56,9 @@ def query(
         "quality": quality.value if quality else None,
         "genus": genus,
         "species": species,
+        "host_taxid": host_taxid,
+        "host_species": host_species,
+        "host_lineage": host_lineage,
         "release": release,
         "metagenome_id": metagenome_id,
     }
@@ -75,6 +84,12 @@ def fetch(
     quality: MagQuality | None = typer.Option(None, help="Derived MAG quality class."),
     genus: str | None = typer.Option(None, help="Exact MAG genus."),
     species: str | None = typer.Option(None, help="Exact MAG species."),
+    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_species: str | None = typer.Option(None, help="Exact host species name."),
+    host_lineage: str | None = typer.Option(
+        None,
+        help="Exact lineage term matched against host species/genus/family/order/class.",
+    ),
     release: str | None = typer.Option(None, help="Exact MAG release ID."),
     metagenome_id: str | None = typer.Option(None, help="Exact parent metagenome ID."),
     where: str | None = typer.Option(
@@ -105,6 +120,9 @@ def fetch(
         "quality": quality.value if quality else None,
         "genus": genus,
         "species": species,
+        "host_taxid": host_taxid,
+        "host_species": host_species,
+        "host_lineage": host_lineage,
         "release": release,
         "metagenome_id": metagenome_id,
     }

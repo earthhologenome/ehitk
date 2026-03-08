@@ -39,6 +39,6 @@ jobs:
       - name: Smoke test installed CLI
         run: |
           ehitk --help
+          ehitk specimens query --host-species "Podarcis muralis" --limit 1
           ehitk metagenomes query --host-species "Podarcis muralis" --limit 1
           ehitk mags query --genus Escherichia --limit 1
-

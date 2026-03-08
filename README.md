@@ -3,17 +3,18 @@
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/earthhologenome/ehitk)
 
-The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for easily fetching EHI.produced metagenomes, MAGs and related metadata.
+The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for finding and downloading EHI metagenomes, MAGs, specimens, and related metadata from a local SQLite catalog.
 
 It is designed for two common workflows:
 
 - find datasets by metadata
-- download matching shotgun sequencing datasets and MAG fasta files
+- download matching shotgun sequencing datasets and MAG FASTA files
 
 ## Features
 
 - Query metagenomes by host metadata, sample type, biome, and release
-- Query MAGs by taxonomy, parent metagenome, release, and derived quality class
+- Query MAGs by taxonomy, parent metagenome, release, derived quality class, and host taxonomy
+- Query specimens directly
 - Use friendly filters or an advanced `--where` SQL predicate
 - Download paired metagenome reads and MAG FASTA files
 - Show Rich progress bars with filename, progress, speed, and size
@@ -23,7 +24,7 @@ It is designed for two common workflows:
 
 EHItk requires Python 3.10 or newer.
 
-Install locally from this repository:
+Install directly from GitHub:
 
 ```bash
 pip install git+https://github.com/earthhologenome/ehitk
@@ -42,9 +43,11 @@ ehitk
 ├─ metagenomes
 │  ├─ query
 │  └─ fetch
-└─ mags
-   ├─ query
-   └─ fetch
+├─ mags
+│  ├─ query
+│  └─ fetch
+└─ specimens
+   └─ query
 ```
 
 ## Quick Start
@@ -59,6 +62,12 @@ Query MAGs:
 
 ```bash
 ehitk mags query --genus Escherichia --limit 5
+```
+
+Query specimens:
+
+```bash
+ehitk specimens query --host-species "Podarcis muralis" --limit 5
 ```
 
 Fetch one MAG:
@@ -95,7 +104,7 @@ ehitk metagenomes query --host-lineage Reptilia
 ehitk metagenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
 ```
 
-`--host-lineage` matches exactly against the lineage-related host columns already present in the catalog:
+`--host-lineage` matches exactly against:
 
 - `host_species`
 - `host_genus`
@@ -110,6 +119,9 @@ Supported MAG filters:
 - `--quality`
 - `--genus`
 - `--species`
+- `--host-taxid`
+- `--host-species`
+- `--host-lineage`
 - `--release`
 - `--metagenome-id`
 - `--where`
@@ -121,10 +133,18 @@ Examples:
 ehitk mags query --quality high
 ehitk mags query --genus Escherichia
 ehitk mags query --species "Escherichia coli"
+ehitk mags query --host-species "Sciurus carolinensis"
 ehitk mags query --metagenome-id EHI00392
 ```
 
 MAG taxonomy values in the catalog may use GTDB-style prefixes such as `g__` and `s__`. EHItk normalizes those during filtering and display, so `--genus Escherichia` matches `g__Escherichia`.
+
+MAG queries and fetches can also use host taxonomy through the MAG → metagenome → specimen join path:
+
+```bash
+ehitk mags query --host-species "Sciurus carolinensis"
+ehitk mags query --host-lineage Mammalia
+```
 
 Derived MAG quality classes are defined as:
 
@@ -132,15 +152,36 @@ Derived MAG quality classes are defined as:
 - `medium`: `completeness >= 50` and `contamination <= 10`
 - `low`: everything else
 
+## Querying Specimens
+
+Supported specimen filters:
+
+- `--specimen-id`
+- `--host-taxid`
+- `--host-species`
+- `--host-lineage`
+- `--sex`
+- `--where`
+- `--limit`
+
+Examples:
+
+```bash
+ehitk specimens query --specimen-id SD00508
+ehitk specimens query --host-species "Podarcis muralis"
+ehitk specimens query --host-lineage Mammalia --sex Female
+```
+
 ## Advanced SQL Filtering
 
 Power users can add an extra SQL predicate with `--where`.
 
-Example:
+Examples:
 
 ```bash
 ehitk mags query --where "completeness >= 90 AND contamination <= 5"
 ehitk metagenomes query --where "latitude > 40 AND longitude < 10"
+ehitk specimens query --where "weight IS NOT NULL"
 ```
 
 The `--where` string is appended to the generated SQL query after validation.
@@ -178,11 +219,12 @@ ehitk metagenomes fetch --host-species "Podarcis muralis" --limit 1
 `ehitk mags fetch` downloads the MAG FASTA from `url`.
 
 - files are written under `downloads/mags/<mag_id>/`
+- MAG selection can include host taxonomy filters because host metadata is resolved through specimens
 
 Example:
 
 ```bash
-ehitk mags fetch --quality high --limit 3
+ehitk mags fetch --host-lineage Mammalia --quality high --limit 3
 ```
 
 ### Output Options
@@ -198,7 +240,7 @@ Examples:
 
 ```bash
 ehitk mags fetch --genus Escherichia --limit 2 --output-dir results
-ehitk metagenomes fetch --release recActKG66780K7SC --limit 1 --overwrite
+ehitk metagenomes fetch --release EHR01 --limit 1 --overwrite
 ```
 
 ## Download Manifest
@@ -227,3 +269,30 @@ Possible statuses include:
 - `failed`
 
 Checksums are SHA-256 digests of the downloaded local file.
+
+## Catalog Notes
+
+The catalog now contains three linked entity layers:
+
+- `specimens`: host taxonomy and specimen metadata
+- `metagenomes`: collection metadata and read URLs, linked to `specimen_id`
+- `mags`: MAG metadata and MAG FASTA URLs, linked to `metagenome_id`
+
+EHItk resolves host taxonomy from:
+
+- metagenomes via `metagenomes_with_specimen`
+- MAGs via a join from `mags` to `metagenomes_with_specimen`
+
+## Development
+
+Run tests:
+
+```bash
+python3 -m pytest
+```
+
+Run the CLI without installing:
+
+```bash
+PYTHONPATH=src python3 -m ehitk.cli --help
+```

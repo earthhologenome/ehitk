@@ -6,6 +6,7 @@ import typer
 
 from ehitk.mags.commands import app as mags_app
 from ehitk.metagenomes.commands import app as metagenomes_app
+from ehitk.specimens.commands import app as specimens_app
 from ehitk.query import resolve_catalog_path
 
 app = typer.Typer(
@@ -15,6 +16,7 @@ app = typer.Typer(
 
 app.add_typer(metagenomes_app, name="metagenomes")
 app.add_typer(mags_app, name="mags")
+app.add_typer(specimens_app, name="specimens")
 
 
 @app.callback()
