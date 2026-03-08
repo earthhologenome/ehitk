@@ -13,8 +13,9 @@ from ehitk.query import (
     headers_for,
     query_rows,
 )
+from ehitk.stats import render_target_stats
 
-app = typer.Typer(help="Query specimens.", no_args_is_help=True)
+app = typer.Typer(help="Query and summarize specimens.", no_args_is_help=True)
 
 
 @app.command()
@@ -87,3 +88,40 @@ def query(
         csv_path=csv,
         tsv_path=tsv,
     )
+
+
+@app.command()
+def stats(
+    ctx: typer.Context,
+    specimen_id: str | None = typer.Option(None, help="Exact specimen ID."),
+    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_species: str | None = typer.Option(None, help="Exact host species name."),
+    host_lineage: str | None = typer.Option(
+        None,
+        help="Exact lineage term matched against host species/genus/family/order/class.",
+    ),
+    sex: str | None = typer.Option(None, help="Exact sex label."),
+    where: str | None = typer.Option(
+        None,
+        help="Advanced SQL predicate appended to the WHERE clause after validation.",
+    ),
+) -> None:
+    console = Console()
+    filters = {
+        "specimen_id": specimen_id,
+        "host_taxid": host_taxid,
+        "host_species": host_species,
+        "host_lineage": host_lineage,
+        "sex": sex,
+    }
+
+    try:
+        render_target_stats(
+            console,
+            catalog_path=str(catalog_path_from_context(ctx)),
+            target="specimens",
+            filters=filters,
+            where=where,
+        )
+    except QueryValidationError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--where") from exc

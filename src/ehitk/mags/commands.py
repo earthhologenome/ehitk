@@ -17,8 +17,9 @@ from ehitk.query import (
     headers_for,
     query_rows,
 )
+from ehitk.stats import render_target_stats
 
-app = typer.Typer(help="Query and fetch metagenome-assembled genomes.", no_args_is_help=True)
+app = typer.Typer(help="Query, summarize, and fetch metagenome-assembled genomes.", no_args_is_help=True)
 
 
 class MagQuality(str, Enum):
@@ -216,6 +217,49 @@ def fetch(
         console=console,
     )
     _print_fetch_summary(console, results)
+
+
+@app.command()
+def stats(
+    ctx: typer.Context,
+    quality: MagQuality | None = typer.Option(None, help="Derived MAG quality class."),
+    genus: str | None = typer.Option(None, help="Exact MAG genus."),
+    species: str | None = typer.Option(None, help="Exact MAG species."),
+    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_species: str | None = typer.Option(None, help="Exact host species name."),
+    host_lineage: str | None = typer.Option(
+        None,
+        help="Exact lineage term matched against host species/genus/family/order/class.",
+    ),
+    release: str | None = typer.Option(None, help="Exact MAG release ID."),
+    metagenome_id: str | None = typer.Option(None, help="Exact parent metagenome ID."),
+    where: str | None = typer.Option(
+        None,
+        help="Advanced SQL predicate appended to the WHERE clause after validation.",
+    ),
+) -> None:
+    console = Console()
+    filters = {
+        "quality": quality.value if quality else None,
+        "genus": genus,
+        "species": species,
+        "host_taxid": host_taxid,
+        "host_species": host_species,
+        "host_lineage": host_lineage,
+        "release": release,
+        "metagenome_id": metagenome_id,
+    }
+
+    try:
+        render_target_stats(
+            console,
+            catalog_path=str(catalog_path_from_context(ctx)),
+            target="mags",
+            filters=filters,
+            where=where,
+        )
+    except QueryValidationError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--where") from exc
 
 def _print_fetch_summary(console: Console, results: list) -> None:
     if not results:

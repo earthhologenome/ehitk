@@ -53,12 +53,15 @@ ehitk --db /path/to/ehitk.sqlite --help
 ```text
 ehitk
 ├─ specimens
-│  └─ query
+│  ├─ query
+│  └─ stats
 ├─ metagenomes
 │  ├─ query
+│  ├─ stats
 │  └─ fetch
 └─ mags
    ├─ query
+   ├─ stats
    └─ fetch
 ```
 
@@ -80,6 +83,12 @@ Query MAGs:
 
 ```bash
 ehitk mags query --genus Escherichia --limit 5
+```
+
+Summarize MAGs:
+
+```bash
+ehitk mags stats --quality high --species "Escherichia coli"
 ```
 
 Fetch one metagenome:
@@ -125,6 +134,12 @@ ehitk metagenomes query --sample-type Faecal --biome "1000221 - Temperate woodla
 - `host_order`
 - `host_class`
 
+Metagenome summary statistics:
+
+```bash
+ehitk metagenomes stats --host-species "Podarcis muralis"
+```
+
 ## Querying MAGs
 
 Supported MAG filters:
@@ -159,6 +174,13 @@ Derived MAG quality classes are defined as:
 - `medium`: `completeness >= 50` and `contamination <= 10`
 - `low`: everything else
 
+MAG summary statistics:
+
+```bash
+ehitk mags stats --quality high --species "Escherichia coli"
+ehitk mags stats --host-species "Sciurus carolinensis"
+```
+
 ## Querying Specimens
 
 Supported specimen filters:
@@ -178,6 +200,12 @@ Examples:
 ehitk specimens query --specimen-id SD00508
 ehitk specimens query --host-species "Podarcis muralis"
 ehitk specimens query --host-lineage Mammalia --sex Female
+```
+
+Specimen summary statistics:
+
+```bash
+ehitk specimens stats --host-lineage Reptilia
 ```
 
 ## Controlling Query Columns

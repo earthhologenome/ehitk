@@ -16,8 +16,9 @@ from ehitk.query import (
     headers_for,
     query_rows,
 )
+from ehitk.stats import render_target_stats
 
-app = typer.Typer(help="Query and fetch metagenomes.", no_args_is_help=True)
+app = typer.Typer(help="Query, summarize, and fetch metagenomes.", no_args_is_help=True)
 
 
 @app.command()
@@ -217,6 +218,45 @@ def fetch(
         console=console,
     )
     _print_fetch_summary(console, results)
+
+
+@app.command()
+def stats(
+    ctx: typer.Context,
+    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_species: str | None = typer.Option(None, help="Exact host species name."),
+    host_lineage: str | None = typer.Option(
+        None,
+        help="Exact lineage term matched against host species/genus/family/order/class.",
+    ),
+    sample_type: str | None = typer.Option(None, help="Exact sample type."),
+    biome: str | None = typer.Option(None, help="Exact biome label."),
+    release: str | None = typer.Option(None, help="Exact release ID."),
+    where: str | None = typer.Option(
+        None,
+        help="Advanced SQL predicate appended to the WHERE clause after validation.",
+    ),
+) -> None:
+    console = Console()
+    filters = {
+        "host_taxid": host_taxid,
+        "host_species": host_species,
+        "host_lineage": host_lineage,
+        "sample_type": sample_type,
+        "biome": biome,
+        "release": release,
+    }
+
+    try:
+        render_target_stats(
+            console,
+            catalog_path=str(catalog_path_from_context(ctx)),
+            target="metagenomes",
+            filters=filters,
+            where=where,
+        )
+    except QueryValidationError as exc:
+        raise typer.BadParameter(str(exc), param_hint="--where") from exc
 
 def _print_fetch_summary(console: Console, results: list) -> None:
     if not results:

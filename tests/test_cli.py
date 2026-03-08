@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from typer.testing import CliRunner
 
 from ehitk import __version__
@@ -22,6 +24,11 @@ def test_root_version_option() -> None:
     assert __version__ in result.output
 
 
+def test_package_version_matches_pyproject() -> None:
+    pyproject = Path("pyproject.toml").read_text(encoding="utf-8")
+    assert f'version = "{__version__}"' in pyproject
+
+
 def test_metagenomes_query_cli() -> None:
     result = runner.invoke(
         app,
@@ -34,7 +41,7 @@ def test_metagenomes_query_cli() -> None:
 def test_mags_query_cli() -> None:
     result = runner.invoke(
         app,
-        ["mags", "query", "--genus", "Escherichia", "--limit", "1"],
+        ["mags", "query", "--genus", "Escherichia", "--limit", "1", "--columns", "mag_id,mag_genus"],
     )
     assert result.exit_code == 0
     assert "EHM" in result.stdout
@@ -52,7 +59,16 @@ def test_specimens_query_cli() -> None:
 def test_mags_query_cli_with_host_filter() -> None:
     result = runner.invoke(
         app,
-        ["mags", "query", "--host-species", "Sciurus carolinensis", "--limit", "1"],
+        [
+            "mags",
+            "query",
+            "--host-species",
+            "Sciurus carolinensis",
+            "--limit",
+            "1",
+            "--columns",
+            "mag_id,host_species",
+        ],
     )
     assert result.exit_code == 0
     assert "EHM" in result.stdout
@@ -123,8 +139,10 @@ def test_query_cli_rejects_csv_and_tsv_together(tmp_path) -> None:
 
 
 def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
-    output_path = tmp_path / "metagenomes-default.csv"
-    result = runner.invoke(
+    default_output_path = tmp_path / "metagenomes-default.csv"
+    implicit_output_path = tmp_path / "metagenomes-implicit.csv"
+
+    default_result = runner.invoke(
         app,
         [
             "metagenomes",
@@ -136,12 +154,25 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
             "--columns",
             "default",
             "--csv",
-            str(output_path),
+            str(default_output_path),
         ],
     )
-    assert result.exit_code == 0
-    contents = output_path.read_text(encoding="utf-8").splitlines()
-    assert contents[0] == "metagenome_id,specimen_id,release,sample_type,host_species,host_genus,biome"
+    implicit_result = runner.invoke(
+        app,
+        [
+            "metagenomes",
+            "query",
+            "--host-species",
+            "Podarcis muralis",
+            "--limit",
+            "1",
+            "--csv",
+            str(implicit_output_path),
+        ],
+    )
+    assert default_result.exit_code == 0
+    assert implicit_result.exit_code == 0
+    assert default_output_path.read_text(encoding="utf-8") == implicit_output_path.read_text(encoding="utf-8")
 
 
 def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:
@@ -266,3 +297,34 @@ def test_query_cli_rejects_url_preset_for_specimens() -> None:
     assert result.exit_code != 0
     assert "Column preset 'url' is not available for" in result.output
     assert "Available presets: default." in result.output
+
+
+def test_metagenomes_stats_cli() -> None:
+    result = runner.invoke(
+        app,
+        ["metagenomes", "stats", "--host-species", "Podarcis muralis"],
+    )
+    assert result.exit_code == 0
+    assert "Matched metagenomes:" in result.output
+    assert "Top sample types" in result.output
+
+
+def test_mags_stats_cli_allows_combined_filters() -> None:
+    result = runner.invoke(
+        app,
+        ["mags", "stats", "--quality", "high", "--species", "Escherichia coli"],
+    )
+    assert result.exit_code == 0
+    assert "Matched MAGs:" in result.output
+    assert "Quality" in result.output
+    assert "distribution" in result.output
+
+
+def test_specimens_stats_cli() -> None:
+    result = runner.invoke(
+        app,
+        ["specimens", "stats", "--host-lineage", "Reptilia"],
+    )
+    assert result.exit_code == 0
+    assert "Matched specimens:" in result.output
+    assert "Sex distribution" in result.output

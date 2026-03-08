@@ -547,15 +547,13 @@ def build_query(
         if fetch
         else select_expressions_for(target, resolve_query_headers(target, columns))
     )
-    conditions, parameters = _build_conditions(target, filters or {})
+    base_sql, parameters = build_filtered_source_query(
+        target,
+        filters=filters,
+        where=where,
+    )
 
-    safe_where = validate_where_clause(where)
-    if safe_where:
-        conditions.append(f"({safe_where})")
-
-    sql = f"SELECT {', '.join(selected_columns)} FROM {config.source}"
-    if conditions:
-        sql += " WHERE " + " AND ".join(conditions)
+    sql = f"SELECT {', '.join(selected_columns)} FROM ({base_sql}) AS filtered"
     sql += f" ORDER BY {config.order_by}"
 
     if limit is not None:
@@ -563,6 +561,29 @@ def build_query(
             raise QueryValidationError("The query limit must be greater than zero.")
         sql += " LIMIT ?"
         parameters.append(limit)
+
+    return sql, parameters
+
+
+def build_filtered_source_query(
+    target: str,
+    *,
+    filters: Mapping[str, Any] | None = None,
+    where: str | None = None,
+) -> tuple[str, list[Any]]:
+    if target not in TARGETS:
+        raise QueryValidationError(f"Unsupported query target: {target}.")
+
+    config = TARGETS[target]
+    conditions, parameters = _build_conditions(target, filters or {})
+
+    safe_where = validate_where_clause(where)
+    if safe_where:
+        conditions.append(f"({safe_where})")
+
+    sql = f"SELECT * FROM {config.source}"
+    if conditions:
+        sql += " WHERE " + " AND ".join(conditions)
 
     return sql, parameters
 

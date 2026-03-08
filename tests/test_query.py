@@ -1,5 +1,6 @@
 from ehitk.query import (
     QueryValidationError,
+    build_filtered_source_query,
     build_query,
     default_catalog_path,
     headers_for,
@@ -46,6 +47,7 @@ def test_query_rows_returns_mags() -> None:
         "mags",
         filters={"genus": "Escherichia"},
         limit=2,
+        columns="mag_id,mag_genus",
     )
     assert rows
     assert rows[0]["mag_id"].startswith("EHM")
@@ -75,15 +77,7 @@ def test_query_rows_returns_mags_with_host_taxonomy() -> None:
 
 
 def test_headers_for_columns_default_and_all() -> None:
-    assert headers_for("metagenomes") == (
-        "metagenome_id",
-        "specimen_id",
-        "release",
-        "sample_type",
-        "host_species",
-        "host_genus",
-        "biome",
-    )
+    assert headers_for("metagenomes") == headers_for("metagenomes", columns="default")
     assert "host_class" in headers_for("metagenomes", columns="all")
     assert headers_for("metagenomes", columns="url") == (
         "metagenome_id",
@@ -117,3 +111,14 @@ def test_build_query_rejects_unsupported_column_preset() -> None:
     except QueryValidationError:
         return
     raise AssertionError("Expected QueryValidationError for unsupported preset")
+
+
+def test_build_filtered_source_query_allows_combined_mag_filters() -> None:
+    sql, params = build_filtered_source_query(
+        "mags",
+        filters={"quality": "high", "species": "Escherichia coli"},
+        where="host_species = 'Sciurus carolinensis'",
+    )
+    assert "completeness >= 90 AND contamination <= 5" in sql
+    assert "host_species = 'Sciurus carolinensis'" in sql
+    assert params == ["Escherichia coli"]
