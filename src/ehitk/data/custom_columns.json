@@ -2,9 +2,9 @@
   "metagenomes": {
     "default": [
       "metagenome_id",
+      "specimen_id",
       "sample_type",
       "host_species",
-      "host_order",
       "biome"
     ],
     "url": [

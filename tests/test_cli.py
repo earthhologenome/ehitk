@@ -8,6 +8,19 @@ from ehitk.cli import app
 runner = CliRunner()
 
 
+def test_root_command_shows_overview_in_fixed_order() -> None:
+    result = runner.invoke(app, [])
+    assert result.exit_code == 0
+    assert "Earth Hologenome Initiative ToolKit" in result.output
+    assert "Query, summarize, and fetch specimens, metagenomes, and MAGs" in result.output
+    assert "Catalog Snapshot" in result.output
+
+    specimens_index = result.output.rindex("Specimens")
+    metagenomes_index = result.output.rindex("Metagenomes")
+    mags_index = result.output.rindex("MAGs")
+    assert specimens_index < metagenomes_index < mags_index
+
+
 def test_root_help_shows_db_and_hides_completion_options() -> None:
     result = runner.invoke(app, ["--help"])
     assert result.exit_code == 0
@@ -16,6 +29,11 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
     assert "--catalog" not in result.output
     assert "--install-completion" not in result.output
     assert "--show-completion" not in result.output
+
+    specimens_index = result.output.index("specimens")
+    metagenomes_index = result.output.index("metagenomes")
+    mags_index = result.output.index("mags")
+    assert specimens_index < metagenomes_index < mags_index
 
 
 def test_root_version_option() -> None:
@@ -173,6 +191,10 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
     assert default_result.exit_code == 0
     assert implicit_result.exit_code == 0
     assert default_output_path.read_text(encoding="utf-8") == implicit_output_path.read_text(encoding="utf-8")
+    contents = default_output_path.read_text(encoding="utf-8").splitlines()
+    assert contents[0] == (
+        "metagenome_id,specimen_id,release,sample_type,host_species,host_genus,biome"
+    )
 
 
 def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:

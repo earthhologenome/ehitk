@@ -5,7 +5,7 @@ from pathlib import Path
 from rich.console import Console
 import typer
 
-from ehitk.output import render_or_export_rows
+from ehitk.output import render_or_export_rows, validate_export_paths
 from ehitk.query import (
     DEFAULT_QUERY_LIMIT,
     QueryValidationError,
@@ -55,8 +55,7 @@ def query(
     ),
 ) -> None:
     console = Console()
-    if csv is not None and tsv is not None:
-        raise typer.BadParameter("Use only one of --csv or --tsv.")
+    validate_export_paths(csv, tsv)
 
     filters = {
         "specimen_id": specimen_id,

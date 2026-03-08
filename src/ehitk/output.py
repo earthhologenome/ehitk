@@ -6,6 +6,16 @@ from typing import Iterable
 
 from rich.console import Console
 from rich.table import Table
+import typer
+
+
+def validate_export_paths(
+    csv_path: Path | None,
+    tsv_path: Path | None,
+) -> None:
+    if csv_path is not None and tsv_path is not None:
+        typer.echo("Use only one of --csv or --tsv.", err=True)
+        raise typer.Exit(code=2)
 
 
 def render_or_export_rows(
@@ -17,8 +27,7 @@ def render_or_export_rows(
     csv_path: Path | None = None,
     tsv_path: Path | None = None,
 ) -> None:
-    if csv_path is not None and tsv_path is not None:
-        raise ValueError("Use only one of --csv or --tsv.")
+    validate_export_paths(csv_path, tsv_path)
 
     if csv_path is not None:
         _write_delimited_rows(csv_path, headers, rows, delimiter=",")

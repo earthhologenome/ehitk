@@ -77,6 +77,15 @@ def test_query_rows_returns_mags_with_host_taxonomy() -> None:
 
 
 def test_headers_for_columns_default_and_all() -> None:
+    assert headers_for("metagenomes") == (
+        "metagenome_id",
+        "specimen_id",
+        "release",
+        "sample_type",
+        "host_species",
+        "host_genus",
+        "biome",
+    )
     assert headers_for("metagenomes") == headers_for("metagenomes", columns="default")
     assert "host_class" in headers_for("metagenomes", columns="all")
     assert headers_for("metagenomes", columns="url") == (
