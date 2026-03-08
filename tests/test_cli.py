@@ -31,6 +31,15 @@ def _sample_row(sql: str) -> sqlite3.Row:
     return row
 
 
+def _sample_rows(sql: str) -> list[sqlite3.Row]:
+    with sqlite3.connect("src/ehitk/data/ehitk.sqlite") as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(sql).fetchall()
+    if not rows:
+        raise AssertionError("Expected sample rows for test setup.")
+    return rows
+
+
 def test_root_command_shows_overview_in_fixed_order() -> None:
     result = runner.invoke(app, [])
     assert result.exit_code == 0
@@ -216,6 +225,64 @@ def test_mags_query_cli_with_host_filter() -> None:
     )
     assert result.exit_code == 0
     assert "EHM" in result.stdout
+
+
+def test_metagenomes_query_cli_supports_metagenome_id_flag_with_multiple_values(tmp_path) -> None:
+    samples = _sample_rows(
+        """
+        SELECT metagenome_id
+        FROM metagenomes_with_specimen
+        LIMIT 2
+        """
+    )
+    requested_ids = ",".join(row["metagenome_id"] for row in samples)
+    output_path = tmp_path / "metagenome-ids.csv"
+    result = runner.invoke(
+        app,
+        [
+            "metagenomes",
+            "query",
+            "--metagenome-id",
+            requested_ids,
+            "--columns",
+            "metagenome_id",
+            "--csv",
+            str(output_path),
+        ],
+    )
+    assert result.exit_code == 0
+    contents = output_path.read_text(encoding="utf-8")
+    for sample in samples:
+        assert sample["metagenome_id"] in contents
+
+
+def test_mags_query_cli_supports_mag_id_flag_with_multiple_values(tmp_path) -> None:
+    samples = _sample_rows(
+        """
+        SELECT mag_id
+        FROM mags
+        LIMIT 2
+        """
+    )
+    requested_ids = ",".join(row["mag_id"] for row in samples)
+    output_path = tmp_path / "mag-ids.csv"
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--mag-id",
+            requested_ids,
+            "--columns",
+            "mag_id",
+            "--csv",
+            str(output_path),
+        ],
+    )
+    assert result.exit_code == 0
+    contents = output_path.read_text(encoding="utf-8")
+    for sample in samples:
+        assert sample["mag_id"] in contents
 
 
 def test_metagenomes_query_cli_writes_csv(tmp_path) -> None:
@@ -454,6 +521,7 @@ def test_metagenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
         LIMIT 1
         """
     )
+    db_path = Path("data/ehitk.sqlite").resolve()
     batch_path = tmp_path / "metagenomes-fetch.sh"
     manifest_path = tmp_path / "manifest.jsonl"
     result = runner.invoke(
@@ -461,12 +529,14 @@ def test_metagenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
         [
             "metagenomes",
             "fetch",
-            "--where",
-            f"metagenome_id = '{sample['metagenome_id']}'",
+            "--metagenome-id",
+            sample["metagenome_id"],
             "--batch",
             str(batch_path),
             "--manifest-path",
             str(manifest_path),
+            "--db",
+            str(db_path),
         ],
     )
     assert result.exit_code == 0
@@ -495,8 +565,8 @@ def test_mags_fetch_cli_writes_batch_script(tmp_path) -> None:
         [
             "mags",
             "fetch",
-            "--where",
-            f"mag_id = '{sample['mag_id']}'",
+            "--mag-id",
+            sample["mag_id"],
             "--batch",
             str(batch_path),
             "--manifest-path",
@@ -529,8 +599,8 @@ def test_metagenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -
         [
             "metagenomes",
             "fetch",
-            "--where",
-            f"metagenome_id = '{sample['metagenome_id']}'",
+            "--metagenome-id",
+            sample["metagenome_id"],
             "--batch",
             str(batch_path),
             "--manifest-path",
@@ -565,6 +635,15 @@ def test_mags_stats_cli_allows_combined_filters() -> None:
     assert "Matched MAGs:" in result.output
     assert "Quality" in result.output
     assert "distribution" in result.output
+
+
+def test_mags_stats_cli_allows_multiple_quality_values() -> None:
+    result = runner.invoke(
+        app,
+        ["mags", "stats", "--quality", "high,medium"],
+    )
+    assert result.exit_code == 0
+    assert "Matched MAGs:" in result.output
 
 
 def test_specimens_stats_cli() -> None:

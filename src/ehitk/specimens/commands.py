@@ -21,6 +21,11 @@ app = typer.Typer(help="Query and summarize specimens.", no_args_is_help=True)
 @app.command()
 def query(
     ctx: typer.Context,
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
     specimen_id: str | None = typer.Option(None, help="Exact specimen ID."),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
@@ -75,7 +80,7 @@ def query(
 
     try:
         rows = query_rows(
-            catalog_path_from_context(ctx),
+            catalog_path_from_context(ctx, db),
             "specimens",
             filters=filters,
             where=where,
@@ -100,6 +105,11 @@ def query(
 @app.command()
 def stats(
     ctx: typer.Context,
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
     specimen_id: str | None = typer.Option(None, help="Exact specimen ID."),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
@@ -133,7 +143,7 @@ def stats(
     try:
         render_target_stats(
             console,
-            catalog_path=str(catalog_path_from_context(ctx)),
+            catalog_path=str(catalog_path_from_context(ctx, db)),
             target="specimens",
             filters=filters,
             where=where,

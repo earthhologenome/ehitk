@@ -28,6 +28,15 @@ def _sample_row(sql: str) -> sqlite3.Row:
     return row
 
 
+def _sample_rows(sql: str) -> list[sqlite3.Row]:
+    with sqlite3.connect(default_catalog_path()) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(sql).fetchall()
+    if not rows:
+        raise AssertionError("Expected sample rows for test setup.")
+    return rows
+
+
 def test_validate_where_clause_rejects_semicolon() -> None:
     try:
         validate_where_clause("completeness > 90; DROP TABLE mags")
@@ -152,6 +161,50 @@ def test_query_rows_filters_specimens_by_weight_and_length_range() -> None:
     assert any(row["specimen_id"] == sample["specimen_id"] for row in rows)
 
 
+def test_query_rows_supports_comma_separated_metagenome_ids() -> None:
+    samples = _sample_rows(
+        """
+        SELECT metagenome_id
+        FROM metagenomes_with_specimen
+        LIMIT 2
+        """
+    )
+    requested_ids = ",".join(row["metagenome_id"] for row in samples)
+
+    rows = query_rows(
+        default_catalog_path(),
+        "metagenomes",
+        filters={"metagenome_id": requested_ids},
+        limit=10,
+        columns="metagenome_id",
+    )
+
+    returned_ids = {row["metagenome_id"] for row in rows}
+    assert {row["metagenome_id"] for row in samples}.issubset(returned_ids)
+
+
+def test_query_rows_supports_comma_separated_mag_ids() -> None:
+    samples = _sample_rows(
+        """
+        SELECT mag_id
+        FROM mags
+        LIMIT 2
+        """
+    )
+    requested_ids = ",".join(row["mag_id"] for row in samples)
+
+    rows = query_rows(
+        default_catalog_path(),
+        "mags",
+        filters={"mag_id": requested_ids},
+        limit=10,
+        columns="mag_id",
+    )
+
+    returned_ids = {row["mag_id"] for row in rows}
+    assert {row["mag_id"] for row in samples}.issubset(returned_ids)
+
+
 def test_headers_for_columns_default_and_all() -> None:
     assert headers_for("metagenomes") == _default_columns("metagenomes")
     assert headers_for("metagenomes") == headers_for("metagenomes", columns="default")
@@ -216,7 +269,7 @@ def test_build_filtered_source_query_supports_range_and_country_filters() -> Non
             "length_max": 8.0,
         },
     )
-    assert "LOWER(COALESCE(country, '')) = LOWER(?)" in sql
+    assert "LOWER(COALESCE(country, '')) IN (LOWER(?))" in sql
     assert "latitude >= ?" in sql
     assert "latitude <= ?" in sql
     assert "longitude >= ?" in sql
@@ -224,3 +277,17 @@ def test_build_filtered_source_query_supports_range_and_country_filters() -> Non
     assert "json_each(weight)" in sql
     assert "json_each(length)" in sql
     assert params == ["ExampleLand", 10.5, 20.5, -5.0, 5.0, 1.0, 9.0, 2.0, 8.0]
+
+
+def test_build_filtered_source_query_supports_multi_value_quality_and_ids() -> None:
+    sql, params = build_filtered_source_query(
+        "mags",
+        filters={
+            "mag_id": "EHM00001,EHM00002",
+            "quality": "high,medium",
+        },
+    )
+    assert "LOWER(COALESCE(mag_id, '')) IN (LOWER(?), LOWER(?))" in sql
+    assert "(completeness >= 90 AND contamination <= 5)" in sql
+    assert "(completeness >= 50 AND contamination <= 10)" in sql
+    assert params == ["EHM00001", "EHM00002"]

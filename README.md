@@ -49,6 +49,7 @@ Use a specific SQLite database file:
 
 ```bash
 ehitk --db /path/to/ehitk.sqlite --help
+ehitk metagenomes query --db /path/to/ehitk.sqlite --limit 5
 ```
 
 ## Command Structure
@@ -122,6 +123,7 @@ ehitk mags fetch --species "Escherichia coli" --limit 1 --batch mags.sh
 
 Supported metagenome filters:
 
+- `--metagenome-id`
 - `--host-taxid`
 - `--host-species`
 - `--host-lineage`
@@ -144,13 +146,17 @@ Supported metagenome filters:
 Examples:
 
 ```bash
+ehitk metagenomes query --metagenome-id EHI00001
 ehitk metagenomes query --host-taxid 64176
 ehitk metagenomes query --host-species "Podarcis muralis"
 ehitk metagenomes query --host-lineage Reptilia
 ehitk metagenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
 ehitk metagenomes query --country recIUTmSxiyqoU5lQ --latitude-min 42.7 --latitude-max 42.8
 ehitk metagenomes query --weight-min 3.0 --weight-max 6.0 --length-min 55 --length-max 65
+ehitk metagenomes query --metagenome-id EHI00001,EHI00002
 ```
+
+Most exact-match filters accept comma-separated values. For example, `--metagenome-id EHI00001,EHI00002` or `--host-species "Homo sapiens,Mus musculus"` matches any of the listed values.
 
 `--host-lineage` matches exactly against:
 
@@ -170,6 +176,7 @@ ehitk metagenomes stats --host-species "Podarcis muralis"
 
 Supported MAG filters:
 
+- `--mag-id`
 - `--quality`
 - `--genus`
 - `--species`
@@ -195,11 +202,14 @@ Examples:
 
 ```bash
 ehitk mags query --quality high
+ehitk mags query --quality high,medium
+ehitk mags query --mag-id EHM00001
 ehitk mags query --genus Escherichia
 ehitk mags query --species "Escherichia coli"
 ehitk mags query --host-species "Sciurus carolinensis"
 ehitk mags query --metagenome-id EHI00392
 ehitk mags query --country recrACkHppgdXdQse --weight-min 630 --weight-max 690
+ehitk mags query --mag-id EHM00001,EHM00002
 ```
 
 MAG taxonomy values in the catalog may use GTDB-style prefixes such as `g__` and `s__`. EHItk normalizes those during filtering and display, so `--genus Escherichia` matches `g__Escherichia`.

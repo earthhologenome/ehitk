@@ -340,7 +340,9 @@ def resolve_catalog_path(catalog_path: str | Path | None = None) -> Path:
     return path.resolve()
 
 
-def catalog_path_from_context(ctx: Any) -> Path:
+def catalog_path_from_context(ctx: Any, catalog_path: str | Path | None = None) -> Path:
+    if catalog_path is not None:
+        return resolve_catalog_path(catalog_path)
     if getattr(ctx, "obj", None) and "catalog_path" in ctx.obj:
         return Path(ctx.obj["catalog_path"])
     return default_catalog_path()
@@ -430,14 +432,21 @@ def _normalized_taxonomy_expr(column: str, prefix: str) -> str:
     )
 
 
-def _casefold_exact(column: str) -> str:
-    return f"LOWER(COALESCE({column}, '')) = LOWER(?)"
+def _casefold_one_of(expression: str, value_count: int) -> str:
+    placeholders = ", ".join("LOWER(?)" for _ in range(value_count))
+    return f"LOWER(COALESCE({expression}, '')) IN ({placeholders})"
 
 
 def _normalize_prefixed_value(value: str, prefix: str) -> str:
     if value.lower().startswith(prefix.lower()):
         return value[len(prefix):]
     return value
+
+
+def _split_filter_values(value: str | None) -> list[str]:
+    if value is None:
+        return []
+    return [part.strip() for part in value.split(",") if part.strip()]
 
 
 def _mag_quality_clause(quality: str) -> str:
@@ -474,16 +483,20 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
     parameters: list[Any] = []
 
     def add_exact(column: str, value: str | None) -> None:
-        if value:
-            conditions.append(_casefold_exact(column))
-            parameters.append(value.strip())
+        values = _split_filter_values(value)
+        if values:
+            conditions.append(_casefold_one_of(column, len(values)))
+            parameters.extend(values)
 
     def add_normalized_taxonomy(column: str, prefix: str, value: str | None) -> None:
-        if value:
+        values = _split_filter_values(value)
+        if values:
             conditions.append(
-                f"LOWER(COALESCE({_normalized_taxonomy_expr(column, prefix)}, '')) = LOWER(?)"
+                _casefold_one_of(_normalized_taxonomy_expr(column, prefix), len(values))
             )
-            parameters.append(_normalize_prefixed_value(value.strip(), prefix))
+            parameters.extend(
+                _normalize_prefixed_value(value, prefix) for value in values
+            )
 
     def add_numeric_range(
         column: str,
@@ -525,8 +538,8 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_exact("host_taxid", filters.get("host_taxid"))
         add_exact("host_species", filters.get("host_species"))
 
-        host_lineage = filters.get("host_lineage")
-        if host_lineage:
+        host_lineage_values = _split_filter_values(filters.get("host_lineage"))
+        if host_lineage_values:
             lineage_columns = (
                 "host_species",
                 "host_genus",
@@ -534,12 +547,19 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
                 "host_order",
                 "host_class",
             )
+            placeholder_count = len(host_lineage_values)
             conditions.append(
-                "(" + " OR ".join(_casefold_exact(column) for column in lineage_columns) + ")"
+                "("
+                + " OR ".join(
+                    _casefold_one_of(column, placeholder_count) for column in lineage_columns
+                )
+                + ")"
             )
-            parameters.extend([host_lineage.strip()] * len(lineage_columns))
+            for _ in lineage_columns:
+                parameters.extend(host_lineage_values)
 
     if target == "metagenomes":
+        add_exact("metagenome_id", filters.get("metagenome_id"))
         add_host_taxonomy_filters()
         add_exact("sample_type", filters.get("sample_type"))
         add_exact("biome", filters.get("biome"))
@@ -551,6 +571,7 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_json_numeric_range("length", filters.get("length_min"), filters.get("length_max"))
 
     elif target == "mags":
+        add_exact("mag_id", filters.get("mag_id"))
         add_exact("release", filters.get("release"))
         add_exact("metagenome_id", filters.get("metagenome_id"))
         add_host_taxonomy_filters()
@@ -562,9 +583,9 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_normalized_taxonomy("mag_genus", "g__", filters.get("genus"))
         add_normalized_taxonomy("mag_species", "s__", filters.get("species"))
 
-        quality = filters.get("quality")
-        if quality:
-            conditions.append(_mag_quality_clause(quality))
+        quality_values = _split_filter_values(filters.get("quality"))
+        if quality_values:
+            conditions.append("(" + " OR ".join(_mag_quality_clause(value) for value in quality_values) + ")")
     elif target == "specimens":
         add_exact("specimen_id", filters.get("specimen_id"))
         add_exact("sex", filters.get("sex"))

@@ -24,6 +24,15 @@ app = typer.Typer(help="Query, summarize, and fetch metagenomes.", no_args_is_he
 @app.command()
 def query(
     ctx: typer.Context,
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+    metagenome_id: str | None = typer.Option(
+        None,
+        help="Exact metagenome ID. Comma-separated values allowed.",
+    ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
     host_lineage: str | None = typer.Option(
@@ -71,6 +80,7 @@ def query(
     validate_export_paths(csv, tsv)
 
     filters = {
+        "metagenome_id": metagenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -90,7 +100,7 @@ def query(
 
     try:
         rows = query_rows(
-            catalog_path_from_context(ctx),
+            catalog_path_from_context(ctx, db),
             "metagenomes",
             filters=filters,
             where=where,
@@ -115,6 +125,15 @@ def query(
 @app.command()
 def fetch(
     ctx: typer.Context,
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+    metagenome_id: str | None = typer.Option(
+        None,
+        help="Exact metagenome ID. Comma-separated values allowed.",
+    ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
     host_lineage: str | None = typer.Option(
@@ -163,6 +182,7 @@ def fetch(
 ) -> None:
     console = Console()
     filters = {
+        "metagenome_id": metagenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -182,7 +202,7 @@ def fetch(
 
     try:
         rows = query_rows(
-            catalog_path_from_context(ctx),
+            catalog_path_from_context(ctx, db),
             "metagenomes",
             filters=filters,
             where=where,
@@ -272,6 +292,15 @@ def fetch(
 @app.command()
 def stats(
     ctx: typer.Context,
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+    metagenome_id: str | None = typer.Option(
+        None,
+        help="Exact metagenome ID. Comma-separated values allowed.",
+    ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
     host_lineage: str | None = typer.Option(
@@ -297,6 +326,7 @@ def stats(
 ) -> None:
     console = Console()
     filters = {
+        "metagenome_id": metagenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -317,7 +347,7 @@ def stats(
     try:
         render_target_stats(
             console,
-            catalog_path=str(catalog_path_from_context(ctx)),
+            catalog_path=str(catalog_path_from_context(ctx, db)),
             target="metagenomes",
             filters=filters,
             where=where,

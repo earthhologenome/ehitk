@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from collections import Counter
-from enum import Enum
 from pathlib import Path
 
 from rich.console import Console
@@ -20,18 +19,22 @@ from ehitk.query import (
 from ehitk.stats import render_target_stats
 
 app = typer.Typer(help="Query, summarize, and fetch metagenome-assembled genomes.", no_args_is_help=True)
-
-
-class MagQuality(str, Enum):
-    high = "high"
-    medium = "medium"
-    low = "low"
-
-
 @app.command()
 def query(
     ctx: typer.Context,
-    quality: MagQuality | None = typer.Option(None, help="Derived MAG quality class."),
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+    mag_id: str | None = typer.Option(
+        None,
+        help="Exact MAG ID. Comma-separated values allowed.",
+    ),
+    quality: str | None = typer.Option(
+        None,
+        help="Derived MAG quality class: high, medium, low. Comma-separated values allowed.",
+    ),
     genus: str | None = typer.Option(None, help="Exact MAG genus."),
     species: str | None = typer.Option(None, help="Exact MAG species."),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
@@ -80,7 +83,8 @@ def query(
     validate_export_paths(csv, tsv)
 
     filters = {
-        "quality": quality.value if quality else None,
+        "mag_id": mag_id,
+        "quality": quality,
         "genus": genus,
         "species": species,
         "host_taxid": host_taxid,
@@ -101,7 +105,7 @@ def query(
 
     try:
         rows = query_rows(
-            catalog_path_from_context(ctx),
+            catalog_path_from_context(ctx, db),
             "mags",
             filters=filters,
             where=where,
@@ -126,7 +130,19 @@ def query(
 @app.command()
 def fetch(
     ctx: typer.Context,
-    quality: MagQuality | None = typer.Option(None, help="Derived MAG quality class."),
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+    mag_id: str | None = typer.Option(
+        None,
+        help="Exact MAG ID. Comma-separated values allowed.",
+    ),
+    quality: str | None = typer.Option(
+        None,
+        help="Derived MAG quality class: high, medium, low. Comma-separated values allowed.",
+    ),
     genus: str | None = typer.Option(None, help="Exact MAG genus."),
     species: str | None = typer.Option(None, help="Exact MAG species."),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
@@ -176,7 +192,8 @@ def fetch(
 ) -> None:
     console = Console()
     filters = {
-        "quality": quality.value if quality else None,
+        "mag_id": mag_id,
+        "quality": quality,
         "genus": genus,
         "species": species,
         "host_taxid": host_taxid,
@@ -197,7 +214,7 @@ def fetch(
 
     try:
         rows = query_rows(
-            catalog_path_from_context(ctx),
+            catalog_path_from_context(ctx, db),
             "mags",
             filters=filters,
             where=where,
@@ -270,7 +287,19 @@ def fetch(
 @app.command()
 def stats(
     ctx: typer.Context,
-    quality: MagQuality | None = typer.Option(None, help="Derived MAG quality class."),
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+    mag_id: str | None = typer.Option(
+        None,
+        help="Exact MAG ID. Comma-separated values allowed.",
+    ),
+    quality: str | None = typer.Option(
+        None,
+        help="Derived MAG quality class: high, medium, low. Comma-separated values allowed.",
+    ),
     genus: str | None = typer.Option(None, help="Exact MAG genus."),
     species: str | None = typer.Option(None, help="Exact MAG species."),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
@@ -297,7 +326,8 @@ def stats(
 ) -> None:
     console = Console()
     filters = {
-        "quality": quality.value if quality else None,
+        "mag_id": mag_id,
+        "quality": quality,
         "genus": genus,
         "species": species,
         "host_taxid": host_taxid,
@@ -319,7 +349,7 @@ def stats(
     try:
         render_target_stats(
             console,
-            catalog_path=str(catalog_path_from_context(ctx)),
+            catalog_path=str(catalog_path_from_context(ctx, db)),
             target="mags",
             filters=filters,
             where=where,
