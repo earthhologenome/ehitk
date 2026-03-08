@@ -7,7 +7,7 @@ from pathlib import Path
 from rich.console import Console
 import typer
 
-from ehitk.download import DownloadJob, destination_for_url, download_jobs
+from ehitk.download import DownloadJob, destination_for_url, download_jobs, write_batch_script
 from ehitk.manifest import ManifestEntry, append_manifest_entry
 from ehitk.output import render_or_export_rows, validate_export_paths
 from ehitk.query import (
@@ -40,8 +40,17 @@ def query(
         None,
         help="Exact lineage term matched against host species/genus/family/order/class.",
     ),
+    country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact MAG release ID."),
     metagenome_id: str | None = typer.Option(None, help="Exact parent metagenome ID."),
+    latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
+    latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
+    longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
+    longitude_max: float | None = typer.Option(None, help="Maximum longitude."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -77,8 +86,17 @@ def query(
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
+        "country": country,
         "release": release,
         "metagenome_id": metagenome_id,
+        "latitude_min": latitude_min,
+        "latitude_max": latitude_max,
+        "longitude_min": longitude_min,
+        "longitude_max": longitude_max,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:
@@ -117,8 +135,17 @@ def fetch(
         None,
         help="Exact lineage term matched against host species/genus/family/order/class.",
     ),
+    country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact MAG release ID."),
     metagenome_id: str | None = typer.Option(None, help="Exact parent metagenome ID."),
+    latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
+    latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
+    longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
+    longitude_max: float | None = typer.Option(None, help="Maximum longitude."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -131,6 +158,11 @@ def fetch(
     output_dir: Path = typer.Option(
         Path("downloads"),
         help="Base output directory for downloaded files.",
+    ),
+    batch: Path | None = typer.Option(
+        None,
+        "--batch",
+        help="Write a shell script with curl download commands instead of downloading now.",
     ),
     manifest_path: Path = typer.Option(
         Path("manifest.jsonl"),
@@ -150,8 +182,17 @@ def fetch(
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
+        "country": country,
         "release": release,
         "metagenome_id": metagenome_id,
+        "latitude_min": latitude_min,
+        "latitude_max": latitude_max,
+        "longitude_min": longitude_min,
+        "longitude_max": longitude_max,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:
@@ -177,18 +218,19 @@ def fetch(
         url = row["url"]
         if not url:
             missing_url_count += 1
-            append_manifest_entry(
-                manifest_path,
-                ManifestEntry(
-                    entry_type="mag",
-                    id_field="mag_id",
-                    id_value=mag_id,
-                    url=None,
-                    path=None,
-                    checksum=None,
-                    status="missing_url",
-                ),
-            )
+            if batch is None:
+                append_manifest_entry(
+                    manifest_path,
+                    ManifestEntry(
+                        entry_type="mag",
+                        id_field="mag_id",
+                        id_value=mag_id,
+                        url=None,
+                        path=None,
+                        checksum=None,
+                        status="missing_url",
+                    ),
+                )
             console.print(f"[yellow]Skipping[/yellow] {mag_id}: missing MAG URL.")
             continue
 
@@ -211,6 +253,11 @@ def fetch(
     if missing_url_count:
         console.print(f"{missing_url_count} MAGs were skipped because URLs were missing.")
 
+    if batch is not None:
+        script_path = write_batch_script(batch, jobs, overwrite=overwrite)
+        console.print(f"Wrote batch download script with {len(jobs)} files to {script_path}.")
+        return
+
     results = download_jobs(
         jobs,
         manifest_path=manifest_path,
@@ -232,8 +279,17 @@ def stats(
         None,
         help="Exact lineage term matched against host species/genus/family/order/class.",
     ),
+    country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact MAG release ID."),
     metagenome_id: str | None = typer.Option(None, help="Exact parent metagenome ID."),
+    latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
+    latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
+    longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
+    longitude_max: float | None = typer.Option(None, help="Maximum longitude."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -247,8 +303,17 @@ def stats(
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
+        "country": country,
         "release": release,
         "metagenome_id": metagenome_id,
+        "latitude_min": latitude_min,
+        "latitude_max": latitude_max,
+        "longitude_min": longitude_min,
+        "longitude_max": longitude_max,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:

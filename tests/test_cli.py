@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import re
+import sqlite3
 
 from typer.testing import CliRunner
 
@@ -19,6 +20,15 @@ def _default_columns(target: str) -> tuple[str, ...]:
     custom_columns_path = Path("src/ehitk/data/custom_columns.json")
     raw = json.loads(custom_columns_path.read_text(encoding="utf-8"))
     return tuple(raw[target]["default"])
+
+
+def _sample_row(sql: str) -> sqlite3.Row:
+    with sqlite3.connect("src/ehitk/data/ehitk.sqlite") as connection:
+        connection.row_factory = sqlite3.Row
+        row = connection.execute(sql).fetchone()
+    if row is None:
+        raise AssertionError("Expected sample row for test setup.")
+    return row
 
 
 def test_root_command_shows_overview_in_fixed_order() -> None:
@@ -88,6 +98,106 @@ def test_specimens_query_cli() -> None:
     )
     assert result.exit_code == 0
     assert "SD" in result.stdout
+
+
+def test_metagenomes_query_cli_supports_country_and_coordinate_ranges() -> None:
+    sample = _sample_row(
+        """
+        SELECT metagenome_id, country, latitude, longitude
+        FROM metagenomes_with_specimen
+        WHERE country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
+        LIMIT 1
+        """
+    )
+    result = runner.invoke(
+        app,
+        [
+            "metagenomes",
+            "query",
+            "--country",
+            sample["country"],
+            "--latitude-min",
+            str(float(sample["latitude"]) - 0.01),
+            "--latitude-max",
+            str(float(sample["latitude"]) + 0.01),
+            "--longitude-min",
+            str(float(sample["longitude"]) - 0.01),
+            "--longitude-max",
+            str(float(sample["longitude"]) + 0.01),
+            "--limit",
+            "1",
+            "--columns",
+            "metagenome_id,country,latitude,longitude",
+        ],
+    )
+    assert result.exit_code == 0
+    assert sample["metagenome_id"] in result.stdout
+
+
+def test_specimens_query_cli_supports_weight_and_length_ranges() -> None:
+    sample = _sample_row(
+        """
+        SELECT specimen_id, weight, length
+        FROM specimens
+        WHERE weight IS NOT NULL AND length IS NOT NULL
+        LIMIT 1
+        """
+    )
+    weight_value = float(json.loads(sample["weight"])[0])
+    length_value = float(json.loads(sample["length"])[0])
+    result = runner.invoke(
+        app,
+        [
+            "specimens",
+            "query",
+            "--weight-min",
+            str(weight_value - 0.1),
+            "--weight-max",
+            str(weight_value + 0.1),
+            "--length-min",
+            str(length_value - 0.1),
+            "--length-max",
+            str(length_value + 0.1),
+            "--limit",
+            "1",
+            "--columns",
+            "specimen_id,weight,length",
+        ],
+    )
+    assert result.exit_code == 0
+    assert sample["specimen_id"] in result.stdout
+
+
+def test_mags_query_cli_supports_country_and_weight_ranges() -> None:
+    sample = _sample_row(
+        """
+        SELECT m.mag_id, mgws.country, mgws.weight
+        FROM mags AS m
+        JOIN metagenomes_with_specimen AS mgws ON m.metagenome_id = mgws.metagenome_id
+        WHERE mgws.country IS NOT NULL AND mgws.weight IS NOT NULL
+        LIMIT 1
+        """
+    )
+    weight_value = float(json.loads(sample["weight"])[0])
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--country",
+            sample["country"],
+            "--weight-min",
+            str(weight_value - 0.1),
+            "--weight-max",
+            str(weight_value + 0.1),
+            "--limit",
+            "1",
+            "--columns",
+            "mag_id,country,weight",
+        ],
+    )
+    assert result.exit_code == 0
+    assert sample["mag_id"] in result.stdout
 
 
 def test_mags_query_cli_with_host_filter() -> None:
@@ -333,6 +443,107 @@ def test_query_cli_rejects_url_preset_for_specimens() -> None:
     assert result.exit_code != 0
     assert "Column preset 'url' is not available for" in result.output
     assert "Available presets: default." in result.output
+
+
+def test_metagenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
+    sample = _sample_row(
+        """
+        SELECT metagenome_id
+        FROM metagenomes_with_specimen
+        WHERE url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> ''
+        LIMIT 1
+        """
+    )
+    batch_path = tmp_path / "metagenomes-fetch.sh"
+    manifest_path = tmp_path / "manifest.jsonl"
+    result = runner.invoke(
+        app,
+        [
+            "metagenomes",
+            "fetch",
+            "--where",
+            f"metagenome_id = '{sample['metagenome_id']}'",
+            "--batch",
+            str(batch_path),
+            "--manifest-path",
+            str(manifest_path),
+        ],
+    )
+    assert result.exit_code == 0
+    assert batch_path.exists()
+    contents = batch_path.read_text(encoding="utf-8")
+    assert contents.startswith("#!/usr/bin/env bash")
+    assert contents.count("curl --fail --location --output") == 2
+    assert sample["metagenome_id"] in contents
+    assert "Wrote batch download script with 2 files" in result.output
+    assert not manifest_path.exists()
+
+
+def test_mags_fetch_cli_writes_batch_script(tmp_path) -> None:
+    sample = _sample_row(
+        """
+        SELECT mag_id
+        FROM mags
+        WHERE url IS NOT NULL AND url <> ''
+        LIMIT 1
+        """
+    )
+    batch_path = tmp_path / "mags-fetch.sh"
+    manifest_path = tmp_path / "manifest.jsonl"
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "fetch",
+            "--where",
+            f"mag_id = '{sample['mag_id']}'",
+            "--batch",
+            str(batch_path),
+            "--manifest-path",
+            str(manifest_path),
+        ],
+    )
+    assert result.exit_code == 0
+    assert batch_path.exists()
+    contents = batch_path.read_text(encoding="utf-8")
+    assert contents.startswith("#!/usr/bin/env bash")
+    assert contents.count("curl --fail --location --output") == 1
+    assert sample["mag_id"] in contents
+    assert "Wrote batch download script with 1 files" in result.output
+    assert not manifest_path.exists()
+
+
+def test_metagenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -> None:
+    sample = _sample_row(
+        """
+        SELECT metagenome_id
+        FROM metagenomes_with_specimen
+        WHERE url1 IS NULL AND url2 IS NULL
+        LIMIT 1
+        """
+    )
+    batch_path = tmp_path / "missing-urls.sh"
+    manifest_path = tmp_path / "manifest.jsonl"
+    result = runner.invoke(
+        app,
+        [
+            "metagenomes",
+            "fetch",
+            "--where",
+            f"metagenome_id = '{sample['metagenome_id']}'",
+            "--batch",
+            str(batch_path),
+            "--manifest-path",
+            str(manifest_path),
+        ],
+    )
+    assert result.exit_code == 0
+    assert batch_path.exists()
+    contents = batch_path.read_text(encoding="utf-8")
+    assert "curl --fail --location --output" not in contents
+    assert "missing paired read URLs" in result.output
+    assert "Wrote batch download script with 0 files" in result.output
+    assert not manifest_path.exists()
 
 
 def test_metagenomes_stats_cli() -> None:

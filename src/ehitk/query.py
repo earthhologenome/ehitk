@@ -485,6 +485,42 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
             )
             parameters.append(_normalize_prefixed_value(value.strip(), prefix))
 
+    def add_numeric_range(
+        column: str,
+        minimum: float | int | None,
+        maximum: float | int | None,
+    ) -> None:
+        if minimum is not None:
+            conditions.append(f"{column} >= ?")
+            parameters.append(minimum)
+        if maximum is not None:
+            conditions.append(f"{column} <= ?")
+            parameters.append(maximum)
+
+    def add_json_numeric_range(
+        column: str,
+        minimum: float | int | None,
+        maximum: float | int | None,
+    ) -> None:
+        if minimum is None and maximum is None:
+            return
+
+        range_conditions: list[str] = []
+        range_parameters: list[float | int] = []
+        if minimum is not None:
+            range_conditions.append("CAST(json_each.value AS REAL) >= ?")
+            range_parameters.append(minimum)
+        if maximum is not None:
+            range_conditions.append("CAST(json_each.value AS REAL) <= ?")
+            range_parameters.append(maximum)
+
+        conditions.append(
+            f"{column} IS NOT NULL AND EXISTS ("
+            f"SELECT 1 FROM json_each({column}) WHERE {' AND '.join(range_conditions)}"
+            f")"
+        )
+        parameters.extend(range_parameters)
+
     def add_host_taxonomy_filters() -> None:
         add_exact("host_taxid", filters.get("host_taxid"))
         add_exact("host_species", filters.get("host_species"))
@@ -508,11 +544,21 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_exact("sample_type", filters.get("sample_type"))
         add_exact("biome", filters.get("biome"))
         add_exact("release", filters.get("release"))
+        add_exact("country", filters.get("country"))
+        add_numeric_range("latitude", filters.get("latitude_min"), filters.get("latitude_max"))
+        add_numeric_range("longitude", filters.get("longitude_min"), filters.get("longitude_max"))
+        add_json_numeric_range("weight", filters.get("weight_min"), filters.get("weight_max"))
+        add_json_numeric_range("length", filters.get("length_min"), filters.get("length_max"))
 
     elif target == "mags":
         add_exact("release", filters.get("release"))
         add_exact("metagenome_id", filters.get("metagenome_id"))
         add_host_taxonomy_filters()
+        add_exact("country", filters.get("country"))
+        add_numeric_range("latitude", filters.get("latitude_min"), filters.get("latitude_max"))
+        add_numeric_range("longitude", filters.get("longitude_min"), filters.get("longitude_max"))
+        add_json_numeric_range("weight", filters.get("weight_min"), filters.get("weight_max"))
+        add_json_numeric_range("length", filters.get("length_min"), filters.get("length_max"))
         add_normalized_taxonomy("mag_genus", "g__", filters.get("genus"))
         add_normalized_taxonomy("mag_species", "s__", filters.get("species"))
 
@@ -523,6 +569,8 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_exact("specimen_id", filters.get("specimen_id"))
         add_exact("sex", filters.get("sex"))
         add_host_taxonomy_filters()
+        add_json_numeric_range("weight", filters.get("weight_min"), filters.get("weight_max"))
+        add_json_numeric_range("length", filters.get("length_min"), filters.get("length_max"))
     else:
         raise QueryValidationError(f"Unsupported query target: {target}.")
 

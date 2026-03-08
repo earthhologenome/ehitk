@@ -6,7 +6,7 @@ from pathlib import Path
 from rich.console import Console
 import typer
 
-from ehitk.download import DownloadJob, destination_for_url, download_jobs
+from ehitk.download import DownloadJob, destination_for_url, download_jobs, write_batch_script
 from ehitk.manifest import ManifestEntry, append_manifest_entry
 from ehitk.output import render_or_export_rows, validate_export_paths
 from ehitk.query import (
@@ -32,7 +32,16 @@ def query(
     ),
     sample_type: str | None = typer.Option(None, help="Exact sample type."),
     biome: str | None = typer.Option(None, help="Exact biome label."),
+    country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
+    latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
+    longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
+    longitude_max: float | None = typer.Option(None, help="Maximum longitude."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -67,7 +76,16 @@ def query(
         "host_lineage": host_lineage,
         "sample_type": sample_type,
         "biome": biome,
+        "country": country,
         "release": release,
+        "latitude_min": latitude_min,
+        "latitude_max": latitude_max,
+        "longitude_min": longitude_min,
+        "longitude_max": longitude_max,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:
@@ -105,7 +123,16 @@ def fetch(
     ),
     sample_type: str | None = typer.Option(None, help="Exact sample type."),
     biome: str | None = typer.Option(None, help="Exact biome label."),
+    country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
+    latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
+    longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
+    longitude_max: float | None = typer.Option(None, help="Maximum longitude."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -118,6 +145,11 @@ def fetch(
     output_dir: Path = typer.Option(
         Path("downloads"),
         help="Base output directory for downloaded files.",
+    ),
+    batch: Path | None = typer.Option(
+        None,
+        "--batch",
+        help="Write a shell script with curl download commands instead of downloading now.",
     ),
     manifest_path: Path = typer.Option(
         Path("manifest.jsonl"),
@@ -136,7 +168,16 @@ def fetch(
         "host_lineage": host_lineage,
         "sample_type": sample_type,
         "biome": biome,
+        "country": country,
         "release": release,
+        "latitude_min": latitude_min,
+        "latitude_max": latitude_max,
+        "longitude_min": longitude_min,
+        "longitude_max": longitude_max,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:
@@ -164,18 +205,19 @@ def fetch(
 
         if not url1 or not url2:
             missing_url_count += 1
-            append_manifest_entry(
-                manifest_path,
-                ManifestEntry(
-                    entry_type="metagenome",
-                    id_field="metagenome_id",
-                    id_value=metagenome_id,
-                    url=None,
-                    path=None,
-                    checksum=None,
-                    status="missing_url",
-                ),
-            )
+            if batch is None:
+                append_manifest_entry(
+                    manifest_path,
+                    ManifestEntry(
+                        entry_type="metagenome",
+                        id_field="metagenome_id",
+                        id_value=metagenome_id,
+                        url=None,
+                        path=None,
+                        checksum=None,
+                        status="missing_url",
+                    ),
+                )
             console.print(f"[yellow]Skipping[/yellow] {metagenome_id}: missing paired read URLs.")
             continue
 
@@ -213,6 +255,11 @@ def fetch(
     if missing_url_count:
         console.print(f"{missing_url_count} metagenomes were skipped because URLs were missing.")
 
+    if batch is not None:
+        script_path = write_batch_script(batch, jobs, overwrite=overwrite)
+        console.print(f"Wrote batch download script with {len(jobs)} files to {script_path}.")
+        return
+
     results = download_jobs(
         jobs,
         manifest_path=manifest_path,
@@ -233,7 +280,16 @@ def stats(
     ),
     sample_type: str | None = typer.Option(None, help="Exact sample type."),
     biome: str | None = typer.Option(None, help="Exact biome label."),
+    country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
+    latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
+    longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
+    longitude_max: float | None = typer.Option(None, help="Maximum longitude."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -246,7 +302,16 @@ def stats(
         "host_lineage": host_lineage,
         "sample_type": sample_type,
         "biome": biome,
+        "country": country,
         "release": release,
+        "latitude_min": latitude_min,
+        "latitude_max": latitude_max,
+        "longitude_min": longitude_min,
+        "longitude_max": longitude_max,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:

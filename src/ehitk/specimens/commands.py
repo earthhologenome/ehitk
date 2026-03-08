@@ -29,6 +29,10 @@ def query(
         help="Exact lineage term matched against host species/genus/family/order/class.",
     ),
     sex: str | None = typer.Option(None, help="Exact sex label."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -63,6 +67,10 @@ def query(
         "host_species": host_species,
         "host_lineage": host_lineage,
         "sex": sex,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:
@@ -100,6 +108,10 @@ def stats(
         help="Exact lineage term matched against host species/genus/family/order/class.",
     ),
     sex: str | None = typer.Option(None, help="Exact sex label."),
+    weight_min: float | None = typer.Option(None, help="Minimum specimen weight."),
+    weight_max: float | None = typer.Option(None, help="Maximum specimen weight."),
+    length_min: float | None = typer.Option(None, help="Minimum specimen length."),
+    length_max: float | None = typer.Option(None, help="Maximum specimen length."),
     where: str | None = typer.Option(
         None,
         help="Advanced SQL predicate appended to the WHERE clause after validation.",
@@ -112,6 +124,10 @@ def stats(
         "host_species": host_species,
         "host_lineage": host_lineage,
         "sex": sex,
+        "weight_min": weight_min,
+        "weight_max": weight_max,
+        "length_min": length_min,
+        "length_max": length_max,
     }
 
     try:

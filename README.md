@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/ehitk_logo.png" alt="EHItk logo" width="240">
+</p>
+
 # EHItk
 
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
@@ -13,8 +17,9 @@ It is designed for two common workflows:
 ## Features
 
 - Query metagenomes by host metadata, sample type, biome, and release
-- Query MAGs by taxonomy, parent metagenome, release, derived quality class, and host taxonomy
-- Query specimens directly
+- Query metagenomes by host metadata, geography, specimen measurements, sample type, biome, and release
+- Query MAGs by taxonomy, parent metagenome, release, derived quality class, host taxonomy, geography, and specimen measurements
+- Query specimens directly, including specimen measurement ranges
 - Use friendly filters or an advanced `--where` SQL predicate
 - Download paired metagenome reads and MAG FASTA files
 - Show Rich progress bars with filename, progress, speed, and size
@@ -97,10 +102,22 @@ Fetch one metagenome:
 ehitk metagenomes fetch --host-lineage Reptilia --limit 1
 ```
 
+Write a metagenome batch download script instead of downloading immediately:
+
+```bash
+ehitk metagenomes fetch --host-lineage Reptilia --limit 1 --batch metagenomes.sh
+```
+
 Fetch one MAG:
 
 ```bash
 ehitk mags fetch --species "Escherichia coli" --limit 1
+```
+
+Write a MAG batch download script instead of downloading immediately:
+
+```bash
+ehitk mags fetch --species "Escherichia coli" --limit 1 --batch mags.sh
 ```
 
 ## Querying Metagenomes
@@ -112,6 +129,15 @@ Supported metagenome filters:
 - `--host-lineage`
 - `--sample-type`
 - `--biome`
+- `--country`
+- `--latitude-min`
+- `--latitude-max`
+- `--longitude-min`
+- `--longitude-max`
+- `--weight-min`
+- `--weight-max`
+- `--length-min`
+- `--length-max`
 - `--release`
 - `--columns`
 - `--where`
@@ -124,6 +150,8 @@ ehitk metagenomes query --host-taxid 64176
 ehitk metagenomes query --host-species "Podarcis muralis"
 ehitk metagenomes query --host-lineage Reptilia
 ehitk metagenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
+ehitk metagenomes query --country recIUTmSxiyqoU5lQ --latitude-min 42.7 --latitude-max 42.8
+ehitk metagenomes query --weight-min 3.0 --weight-max 6.0 --length-min 55 --length-max 65
 ```
 
 `--host-lineage` matches exactly against:
@@ -150,8 +178,17 @@ Supported MAG filters:
 - `--host-taxid`
 - `--host-species`
 - `--host-lineage`
+- `--country`
 - `--release`
 - `--metagenome-id`
+- `--latitude-min`
+- `--latitude-max`
+- `--longitude-min`
+- `--longitude-max`
+- `--weight-min`
+- `--weight-max`
+- `--length-min`
+- `--length-max`
 - `--columns`
 - `--where`
 - `--limit`
@@ -164,6 +201,7 @@ ehitk mags query --genus Escherichia
 ehitk mags query --species "Escherichia coli"
 ehitk mags query --host-species "Sciurus carolinensis"
 ehitk mags query --metagenome-id EHI00392
+ehitk mags query --country recrACkHppgdXdQse --weight-min 630 --weight-max 690
 ```
 
 MAG taxonomy values in the catalog may use GTDB-style prefixes such as `g__` and `s__`. EHItk normalizes those during filtering and display, so `--genus Escherichia` matches `g__Escherichia`.
@@ -190,6 +228,10 @@ Supported specimen filters:
 - `--host-species`
 - `--host-lineage`
 - `--sex`
+- `--weight-min`
+- `--weight-max`
+- `--length-min`
+- `--length-max`
 - `--columns`
 - `--where`
 - `--limit`
@@ -200,7 +242,10 @@ Examples:
 ehitk specimens query --specimen-id SD00508
 ehitk specimens query --host-species "Podarcis muralis"
 ehitk specimens query --host-lineage Mammalia --sex Female
+ehitk specimens query --weight-min 8 --weight-max 9 --length-min 40 --length-max 41
 ```
+
+For `weight` and `length`, the catalog may store multiple recorded values per specimen. Range filters match when any recorded value falls within the requested interval.
 
 Specimen summary statistics:
 
@@ -227,11 +272,11 @@ ehitk metagenomes query --host-species "Podarcis muralis" --columns default
 Examples:
 
 ```bash
+ehitk specimens query --columns specimen_id,host_species,sex --csv specimens.csv
 ehitk metagenomes query --columns url --csv metagenome_urls.csv
 ehitk mags query --columns all --limit 1
 ehitk mags query --columns url --tsv mag_urls.tsv
 ehitk mags query --columns mag_id,host_species,mag_genus --limit 5
-ehitk specimens query --columns specimen_id,host_species,sex --csv specimens.csv
 ```
 
 Column presets are configured in `src/ehitk/data/custom_columns.json`.
@@ -302,6 +347,7 @@ ehitk mags fetch --host-lineage Mammalia --quality high --limit 3
 Both `fetch` commands support:
 
 - `--output-dir PATH`
+- `--batch PATH`
 - `--manifest-path PATH`
 - `--overwrite`
 - `--limit`
@@ -311,7 +357,10 @@ Examples:
 ```bash
 ehitk mags fetch --genus Escherichia --limit 2 --output-dir results
 ehitk metagenomes fetch --release EHR01 --limit 1 --overwrite
+ehitk mags fetch --quality high --limit 10 --batch mags-downloads.sh
 ```
+
+When `--batch` is used, EHItk writes an executable shell script with `curl` commands and does not download files or append manifest entries at generation time.
 
 ## Download Manifest
 
