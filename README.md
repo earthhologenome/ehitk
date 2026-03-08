@@ -1,8 +1,6 @@
 <p align="center">
-  <img src="docs/ehitk_logo.png" alt="EHItk logo" width="240">
+  <img src="docs/ehitk_logo.png" alt="EHItk logo" width="500">
 </p>
-
-# EHItk
 
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/earthhologenome/ehitk)
