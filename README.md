@@ -5,7 +5,7 @@
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/earthhologenome/ehitk)
 
-The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for finding, summarising and downloading date of EHI specimens, metagenomes and MAGs.
+The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for finding, summarising and downloading data from EHI specimens, metagenomes and MAGs.
 
 It is designed for two common workflows:
 
@@ -18,6 +18,7 @@ It is designed for two common workflows:
 - Query metagenomes by host metadata, geography, specimen measurements, sample type, biome, and release
 - Query MAGs by taxonomy, parent metagenome, release, derived quality class, host taxonomy, geography, and specimen measurements
 - Query specimens directly, including specimen measurement ranges
+- Quantify available metagenome data volume (GB) in overview and stats outputs
 - Use friendly filters or an advanced `--where` SQL predicate
 - Download paired metagenome reads and MAG FASTA files
 - Show Rich progress bars with filename, progress, speed, and size
@@ -96,6 +97,7 @@ Explore metagenome values:
 
 ```bash
 ehitk metagenomes values --field country --limit 10
+ehitk metagenomes values --field data --limit 10
 ```
 
 Query MAGs:
@@ -192,6 +194,8 @@ Metagenome summary statistics:
 ```bash
 ehitk metagenomes stats --host-species "Podarcis muralis"
 ```
+
+Metagenome and MAG statistics include available metagenome data totals in gigabases (GB).
 
 Metagenome value summaries:
 
@@ -332,6 +336,8 @@ ehitk mags query --columns mag_id,host_species,mag_genus --limit 5
 ```
 
 Column presets are configured in `src/ehitk/data/custom_columns.json`.
+
+The default metagenome preset includes the `data` column so dataset size is visible without requesting extra columns.
 
 The `url` preset is only available for:
 

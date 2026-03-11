@@ -64,6 +64,11 @@ def _render_metagenome_stats(
             COUNT(DISTINCT release) AS distinct_releases,
             COUNT(DISTINCT host_species) AS distinct_host_species,
             COUNT(DISTINCT biome) AS distinct_biomes,
+            SUM(CASE WHEN data IS NOT NULL THEN 1 ELSE 0 END) AS with_data,
+            SUM(data) AS total_data_gb,
+            AVG(data) AS avg_data_gb,
+            MIN(data) AS min_data_gb,
+            MAX(data) AS max_data_gb,
             SUM(CASE WHEN url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> '' THEN 1 ELSE 0 END) AS with_paired_urls,
             SUM(CASE WHEN url1 IS NULL OR url1 = '' OR url2 IS NULL OR url2 = '' THEN 1 ELSE 0 END) AS missing_paired_urls
         FROM ({base_sql}) AS filtered
@@ -83,6 +88,12 @@ def _render_metagenome_stats(
             ("Distinct releases", summary["distinct_releases"]),
             ("Distinct host species", summary["distinct_host_species"]),
             ("Distinct biomes", summary["distinct_biomes"]),
+            ("With data", summary["with_data"]),
+            ("Available data (GB total)", _format_gb(summary["total_data_gb"])),
+            (
+                "Data per metagenome (GB avg/min/max)",
+                _format_range(summary["avg_data_gb"], summary["min_data_gb"], summary["max_data_gb"]),
+            ),
             ("With paired URLs", summary["with_paired_urls"]),
             ("Missing paired URLs", summary["missing_paired_urls"]),
         ),
@@ -134,6 +145,23 @@ def _render_mag_stats(
         """,
         parameters,
     )
+    parent_data = _fetchone(
+        connection,
+        f"""
+        SELECT
+            COUNT(*) AS metagenomes_with_data,
+            SUM(data) AS total_data_gb,
+            AVG(data) AS avg_data_gb,
+            MIN(data) AS min_data_gb,
+            MAX(data) AS max_data_gb
+        FROM (
+            SELECT DISTINCT metagenome_id, data
+            FROM ({base_sql}) AS filtered
+            WHERE metagenome_id IS NOT NULL AND data IS NOT NULL
+        ) AS parent_data
+        """,
+        parameters,
+    )
     if summary["matched_mags"] == 0:
         console.print("No matching MAGs found.")
         return
@@ -148,6 +176,16 @@ def _render_mag_stats(
             ("Distinct host species", summary["distinct_host_species"]),
             ("Distinct releases", summary["distinct_releases"]),
             ("With URLs", summary["with_urls"]),
+            ("Parent metagenomes with data", parent_data["metagenomes_with_data"]),
+            ("Parent metagenome data (GB total)", _format_gb(parent_data["total_data_gb"])),
+            (
+                "Parent metagenome data (GB avg/min/max)",
+                _format_range(
+                    parent_data["avg_data_gb"],
+                    parent_data["min_data_gb"],
+                    parent_data["max_data_gb"],
+                ),
+            ),
             (
                 "Completeness (avg/min/max)",
                 _format_range(
@@ -321,3 +359,9 @@ def _format_range(avg_value: Any, min_value: Any, max_value: Any) -> str:
     if avg_value is None:
         return "n/a"
     return f"{avg_value:.2f} / {min_value:.2f} / {max_value:.2f}"
+
+
+def _format_gb(value: Any) -> str:
+    if value is None:
+        return "n/a"
+    return f"{value:,.2f}"

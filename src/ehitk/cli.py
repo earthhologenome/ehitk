@@ -99,16 +99,22 @@ def _catalog_summary(database_path: Path) -> tuple[dict[str, str], ...]:
             """
             SELECT
                 COUNT(*) AS records,
-                SUM(CASE WHEN url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> '' THEN 1 ELSE 0 END) AS paired_urls
+                SUM(CASE WHEN url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> '' THEN 1 ELSE 0 END) AS paired_urls,
+                SUM(data) AS total_data_gb
             FROM metagenomes
             """
         ).fetchone()
         mags = connection.execute(
             """
             SELECT
-                COUNT(*) AS records,
-                COUNT(DISTINCT metagenome_id) AS parent_metagenomes
-            FROM mags
+                (SELECT COUNT(*) FROM mags) AS records,
+                COUNT(*) AS parent_metagenomes,
+                SUM(data) AS total_parent_data_gb
+            FROM (
+                SELECT DISTINCT metagenome_id, data
+                FROM mags_with_metagenome
+                WHERE metagenome_id IS NOT NULL
+            )
             """
         ).fetchone()
 
@@ -121,14 +127,24 @@ def _catalog_summary(database_path: Path) -> tuple[dict[str, str], ...]:
         {
             "level": "Metagenomes",
             "records": f"{metagenomes[0]:,}",
-            "summary": f"{metagenomes[1]:,} paired read sets",
+            "summary": (
+                f"{metagenomes[1]:,} paired read sets, {_format_gb(metagenomes[2])} GB"
+            ),
         },
         {
             "level": "MAGs",
             "records": f"{mags[0]:,}",
-            "summary": f"{mags[1]:,} parent metagenomes",
+            "summary": (
+                f"{mags[1]:,} parent metagenomes, {_format_gb(mags[2])} GB"
+            ),
         },
     )
+
+
+def _format_gb(value: float | int | None) -> str:
+    if value is None:
+        return "0.00"
+    return f"{value:,.2f}"
 
 
 if __name__ == "__main__":

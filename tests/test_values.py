@@ -14,6 +14,18 @@ def test_value_rows_returns_metagenome_host_species_counts() -> None:
     assert rows[0]["count"] >= 1
 
 
+def test_value_rows_returns_metagenome_data_counts() -> None:
+    field, rows = value_rows(
+        str(default_catalog_path()),
+        target="metagenomes",
+        field="data",
+        limit=5,
+    )
+    assert field == "data"
+    assert rows
+    assert rows[0]["count"] >= 1
+
+
 def test_value_rows_supports_mag_genus_alias() -> None:
     field, rows = value_rows(
         str(default_catalog_path()),

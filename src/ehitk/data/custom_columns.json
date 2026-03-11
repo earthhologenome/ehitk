@@ -5,7 +5,8 @@
       "specimen_id",
       "sample_type",
       "host_species",
-      "biome"
+      "biome",
+      "data"
     ],
     "url": [
       "metagenome_id",

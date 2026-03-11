@@ -10,10 +10,19 @@ from ehitk.cli import app
 
 runner = CliRunner()
 ANSI_PATTERN = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
+ROOT_DB_PATH = Path("data/ehitk.sqlite")
+if not ROOT_DB_PATH.exists():
+    ROOT_DB_PATH = Path("src/ehitk/data/ehitk.sqlite")
 
 
 def _strip_ansi(text: str) -> str:
     return ANSI_PATTERN.sub("", text)
+
+
+def _format_gb(value: float | int | None) -> str:
+    if value is None:
+        return "0.00"
+    return f"{value:,.2f}"
 
 
 def _default_columns(target: str) -> tuple[str, ...]:
@@ -40,6 +49,15 @@ def _sample_rows(sql: str) -> list[sqlite3.Row]:
     return rows
 
 
+def _root_summary_row(sql: str) -> sqlite3.Row:
+    with sqlite3.connect(ROOT_DB_PATH) as connection:
+        connection.row_factory = sqlite3.Row
+        row = connection.execute(sql).fetchone()
+    if row is None:
+        raise AssertionError("Expected summary row for test setup.")
+    return row
+
+
 def test_root_command_shows_overview_in_fixed_order() -> None:
     result = runner.invoke(app, [])
     assert result.exit_code == 0
@@ -53,6 +71,41 @@ def test_root_command_shows_overview_in_fixed_order() -> None:
     metagenomes_index = result.output.rindex("Metagenomes")
     mags_index = result.output.rindex("MAGs")
     assert specimens_index < metagenomes_index < mags_index
+
+    specimens = _root_summary_row("SELECT COUNT(*) AS records FROM specimens")
+    metagenomes = _root_summary_row(
+        """
+        SELECT
+            COUNT(*) AS records,
+            SUM(CASE WHEN url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> '' THEN 1 ELSE 0 END) AS paired_urls,
+            SUM(data) AS total_data_gb
+        FROM metagenomes
+        """
+    )
+    mags = _root_summary_row(
+        """
+        SELECT
+            (SELECT COUNT(*) FROM mags) AS records,
+            COUNT(*) AS parent_metagenomes,
+            SUM(data) AS total_parent_data_gb
+        FROM (
+            SELECT DISTINCT metagenome_id, data
+            FROM mags_with_metagenome
+            WHERE metagenome_id IS NOT NULL
+        )
+        """
+    )
+    assert f"{specimens['records']:,}" in result.output
+    assert f"{metagenomes['records']:,}" in result.output
+    assert f"{mags['records']:,}" in result.output
+    assert (
+        f"{metagenomes['paired_urls']:,} paired read sets, "
+        f"{_format_gb(metagenomes['total_data_gb'])} GB"
+    ) in result.output
+    assert (
+        f"{mags['parent_metagenomes']:,} parent metagenomes, "
+        f"{_format_gb(mags['total_parent_data_gb'])} GB"
+    ) in result.output
 
 
 def test_root_help_shows_db_and_hides_completion_options() -> None:
@@ -671,6 +724,7 @@ def test_metagenomes_stats_cli() -> None:
     )
     assert result.exit_code == 0
     assert "Matched metagenomes:" in result.output
+    assert "Available data (GB total):" in result.output
     assert "Top sample types" in result.output
 
 
@@ -681,6 +735,7 @@ def test_mags_stats_cli_allows_combined_filters() -> None:
     )
     assert result.exit_code == 0
     assert "Matched MAGs:" in result.output
+    assert "Parent metagenome data (GB total):" in result.output
     assert "Quality" in result.output
     assert "distribution" in result.output
 

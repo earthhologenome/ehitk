@@ -69,6 +69,18 @@ def test_query_rows_returns_metagenomes() -> None:
     assert rows[0]["metagenome_id"].startswith("EHI")
 
 
+def test_query_rows_returns_metagenome_data_column() -> None:
+    rows = query_rows(
+        default_catalog_path(),
+        "metagenomes",
+        filters={"host_species": "Podarcis muralis"},
+        limit=2,
+        columns="metagenome_id,data",
+    )
+    assert rows
+    assert "data" in rows[0].keys()
+
+
 def test_query_rows_returns_mags() -> None:
     rows = query_rows(
         default_catalog_path(),
@@ -208,6 +220,8 @@ def test_query_rows_supports_comma_separated_mag_ids() -> None:
 def test_headers_for_columns_default_and_all() -> None:
     assert headers_for("metagenomes") == _default_columns("metagenomes")
     assert headers_for("metagenomes") == headers_for("metagenomes", columns="default")
+    assert "data" in headers_for("metagenomes", columns="all")
+    assert "data" in headers_for("mags", columns="all")
     assert "host_class" in headers_for("metagenomes", columns="all")
     assert headers_for("metagenomes", columns="url") == (
         "metagenome_id",
