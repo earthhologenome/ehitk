@@ -19,7 +19,7 @@ from ehitk.query import (
 from ehitk.stats import render_target_stats
 from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 
-app = typer.Typer(help="Query, summarize, and fetch metagenomes.", no_args_is_help=True)
+app = typer.Typer(help="Query, summarize, and fetch hologenomes.", no_args_is_help=True)
 
 
 @app.command()
@@ -30,9 +30,9 @@ def query(
         "--db",
         help="Path to an alternate SQLite database. Defaults to the bundled database.",
     ),
-    metagenome_id: str | None = typer.Option(
+    hologenome_id: str | None = typer.Option(
         None,
-        help="Exact metagenome ID. Comma-separated values allowed.",
+        help="Exact hologenome ID. Comma-separated values allowed.",
     ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
@@ -81,7 +81,7 @@ def query(
     validate_export_paths(csv, tsv)
 
     filters = {
-        "metagenome_id": metagenome_id,
+        "hologenome_id": hologenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -102,7 +102,7 @@ def query(
     try:
         rows = query_rows(
             catalog_path_from_context(ctx, db),
-            "metagenomes",
+            "hologenomes",
             filters=filters,
             where=where,
             limit=limit,
@@ -115,9 +115,9 @@ def query(
 
     render_or_export_rows(
         console,
-        headers_for("metagenomes", columns=columns),
+        headers_for("hologenomes", columns=columns),
         rows,
-        title="Metagenomes",
+        title="Hologenomes",
         csv_path=csv,
         tsv_path=tsv,
     )
@@ -136,9 +136,9 @@ def values(
         "--field",
         help="Field to summarize with distinct values and counts.",
     ),
-    metagenome_id: str | None = typer.Option(
+    hologenome_id: str | None = typer.Option(
         None,
-        help="Exact metagenome ID. Comma-separated values allowed.",
+        help="Exact hologenome ID. Comma-separated values allowed.",
     ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
@@ -182,7 +182,7 @@ def values(
     validate_export_paths(csv, tsv)
 
     filters = {
-        "metagenome_id": metagenome_id,
+        "hologenome_id": hologenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -203,7 +203,7 @@ def values(
     try:
         resolved_field, rows = value_rows(
             str(catalog_path_from_context(ctx, db)),
-            target="metagenomes",
+            target="hologenomes",
             field=field,
             filters=filters,
             where=where,
@@ -234,9 +234,9 @@ def fetch(
         "--db",
         help="Path to an alternate SQLite database. Defaults to the bundled database.",
     ),
-    metagenome_id: str | None = typer.Option(
+    hologenome_id: str | None = typer.Option(
         None,
-        help="Exact metagenome ID. Comma-separated values allowed.",
+        help="Exact hologenome ID. Comma-separated values allowed.",
     ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
@@ -263,7 +263,7 @@ def fetch(
     limit: int | None = typer.Option(
         None,
         min=1,
-        help="Maximum number of matching metagenomes to fetch.",
+        help="Maximum number of matching hologenomes to fetch.",
     ),
     output_dir: Path = typer.Option(
         Path("downloads"),
@@ -286,7 +286,7 @@ def fetch(
 ) -> None:
     console = Console()
     filters = {
-        "metagenome_id": metagenome_id,
+        "hologenome_id": hologenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -307,7 +307,7 @@ def fetch(
     try:
         rows = query_rows(
             catalog_path_from_context(ctx, db),
-            "metagenomes",
+            "hologenomes",
             filters=filters,
             where=where,
             limit=limit,
@@ -317,13 +317,13 @@ def fetch(
         raise typer.BadParameter(str(exc), param_hint="--where") from exc
 
     if not rows:
-        console.print("No matching metagenomes found.")
+        console.print("No matching hologenomes found.")
         return
 
     jobs: list[DownloadJob] = []
     missing_url_count = 0
     for row in rows:
-        metagenome_id = row["metagenome_id"]
+        hologenome_id = row["hologenome_id"]
         url1 = row["url1"]
         url2 = row["url2"]
 
@@ -333,51 +333,51 @@ def fetch(
                 append_manifest_entry(
                     manifest_path,
                     ManifestEntry(
-                        entry_type="metagenome",
-                        id_field="metagenome_id",
-                        id_value=metagenome_id,
+                        entry_type="hologenome",
+                        id_field="hologenome_id",
+                        id_value=hologenome_id,
                         url=None,
                         path=None,
                         checksum=None,
                         status="missing_url",
                     ),
                 )
-            console.print(f"[yellow]Skipping[/yellow] {metagenome_id}: missing paired read URLs.")
+            console.print(f"[yellow]Skipping[/yellow] {hologenome_id}: missing paired read URLs.")
             continue
 
-        base_directory = output_dir / "metagenomes" / metagenome_id
+        base_directory = output_dir / "hologenomes" / hologenome_id
         jobs.append(
             DownloadJob(
-                entry_type="metagenome",
-                id_field="metagenome_id",
-                id_value=metagenome_id,
+                entry_type="hologenome",
+                id_field="hologenome_id",
+                id_value=hologenome_id,
                 url=url1,
                 destination=destination_for_url(
                     base_directory,
                     url1,
-                    fallback_name=f"{metagenome_id}_1.fastq.gz",
+                    fallback_name=f"{hologenome_id}_1.fastq.gz",
                 ),
             )
         )
         jobs.append(
             DownloadJob(
-                entry_type="metagenome",
-                id_field="metagenome_id",
-                id_value=metagenome_id,
+                entry_type="hologenome",
+                id_field="hologenome_id",
+                id_value=hologenome_id,
                 url=url2,
                 destination=destination_for_url(
                     base_directory,
                     url2,
-                    fallback_name=f"{metagenome_id}_2.fastq.gz",
+                    fallback_name=f"{hologenome_id}_2.fastq.gz",
                 ),
             )
         )
 
     console.print(
-        f"Matched {len(rows)} metagenomes; queued {len(jobs)} files for download."
+        f"Matched {len(rows)} hologenomes; queued {len(jobs)} files for download."
     )
     if missing_url_count:
-        console.print(f"{missing_url_count} metagenomes were skipped because URLs were missing.")
+        console.print(f"{missing_url_count} hologenomes were skipped because URLs were missing.")
 
     if batch is not None:
         script_path = write_batch_script(batch, jobs, overwrite=overwrite)
@@ -401,9 +401,9 @@ def stats(
         "--db",
         help="Path to an alternate SQLite database. Defaults to the bundled database.",
     ),
-    metagenome_id: str | None = typer.Option(
+    hologenome_id: str | None = typer.Option(
         None,
-        help="Exact metagenome ID. Comma-separated values allowed.",
+        help="Exact hologenome ID. Comma-separated values allowed.",
     ),
     host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
@@ -430,7 +430,7 @@ def stats(
 ) -> None:
     console = Console()
     filters = {
-        "metagenome_id": metagenome_id,
+        "hologenome_id": hologenome_id,
         "host_taxid": host_taxid,
         "host_species": host_species,
         "host_lineage": host_lineage,
@@ -452,7 +452,7 @@ def stats(
         render_target_stats(
             console,
             catalog_path=str(catalog_path_from_context(ctx, db)),
-            target="metagenomes",
+            target="hologenomes",
             filters=filters,
             where=where,
         )

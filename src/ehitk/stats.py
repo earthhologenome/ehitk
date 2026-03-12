@@ -36,8 +36,8 @@ def render_target_stats(
     with sqlite3.connect(resolved_catalog) as connection:
         connection.row_factory = sqlite3.Row
 
-        if target == "metagenomes":
-            _render_metagenome_stats(console, connection, base_sql, parameters)
+        if target == "hologenomes":
+            _render_hologenome_stats(console, connection, base_sql, parameters)
             return
         if target == "mags":
             _render_mag_stats(console, connection, base_sql, parameters)
@@ -49,7 +49,7 @@ def render_target_stats(
     raise ValueError(f"Unsupported stats target: {target}")
 
 
-def _render_metagenome_stats(
+def _render_hologenome_stats(
     console: Console,
     connection: sqlite3.Connection,
     base_sql: str,
@@ -59,7 +59,7 @@ def _render_metagenome_stats(
         connection,
         f"""
         SELECT
-            COUNT(*) AS matched_metagenomes,
+            COUNT(*) AS matched_hologenomes,
             COUNT(DISTINCT specimen_id) AS distinct_specimens,
             COUNT(DISTINCT release) AS distinct_releases,
             COUNT(DISTINCT host_species) AS distinct_host_species,
@@ -75,15 +75,15 @@ def _render_metagenome_stats(
         """,
         parameters,
     )
-    if summary["matched_metagenomes"] == 0:
-        console.print("No matching metagenomes found.")
+    if summary["matched_hologenomes"] == 0:
+        console.print("No matching hologenomes found.")
         return
 
     _print_summary_lines(
         console,
-        "Metagenome Stats",
+        "Hologenome Stats",
         (
-            ("Matched metagenomes", summary["matched_metagenomes"]),
+            ("Matched hologenomes", summary["matched_hologenomes"]),
             ("Distinct specimens", summary["distinct_specimens"]),
             ("Distinct releases", summary["distinct_releases"]),
             ("Distinct host species", summary["distinct_host_species"]),
@@ -91,7 +91,7 @@ def _render_metagenome_stats(
             ("With data", summary["with_data"]),
             ("Available data (GB total)", _format_gb(summary["total_data_gb"])),
             (
-                "Data per metagenome (GB avg/min/max)",
+                "Data per hologenome (GB avg/min/max)",
                 _format_range(summary["avg_data_gb"], summary["min_data_gb"], summary["max_data_gb"]),
             ),
             ("With paired URLs", summary["with_paired_urls"]),
@@ -130,7 +130,7 @@ def _render_mag_stats(
         f"""
         SELECT
             COUNT(*) AS matched_mags,
-            COUNT(DISTINCT metagenome_id) AS distinct_metagenomes,
+            COUNT(DISTINCT hologenome_id) AS distinct_hologenomes,
             COUNT(DISTINCT specimen_id) AS distinct_specimens,
             COUNT(DISTINCT host_species) AS distinct_host_species,
             COUNT(DISTINCT release) AS distinct_releases,
@@ -149,15 +149,15 @@ def _render_mag_stats(
         connection,
         f"""
         SELECT
-            COUNT(*) AS metagenomes_with_data,
+            COUNT(*) AS hologenomes_with_data,
             SUM(data) AS total_data_gb,
             AVG(data) AS avg_data_gb,
             MIN(data) AS min_data_gb,
             MAX(data) AS max_data_gb
         FROM (
-            SELECT DISTINCT metagenome_id, data
+            SELECT DISTINCT hologenome_id, data
             FROM ({base_sql}) AS filtered
-            WHERE metagenome_id IS NOT NULL AND data IS NOT NULL
+            WHERE hologenome_id IS NOT NULL AND data IS NOT NULL
         ) AS parent_data
         """,
         parameters,
@@ -171,15 +171,15 @@ def _render_mag_stats(
         "MAG Stats",
         (
             ("Matched MAGs", summary["matched_mags"]),
-            ("Distinct metagenomes", summary["distinct_metagenomes"]),
+            ("Distinct hologenomes", summary["distinct_hologenomes"]),
             ("Distinct specimens", summary["distinct_specimens"]),
             ("Distinct host species", summary["distinct_host_species"]),
             ("Distinct releases", summary["distinct_releases"]),
             ("With URLs", summary["with_urls"]),
-            ("Parent metagenomes with data", parent_data["metagenomes_with_data"]),
-            ("Parent metagenome data (GB total)", _format_gb(parent_data["total_data_gb"])),
+            ("Parent hologenomes with data", parent_data["hologenomes_with_data"]),
+            ("Parent hologenome data (GB total)", _format_gb(parent_data["total_data_gb"])),
             (
-                "Parent metagenome data (GB avg/min/max)",
+                "Parent hologenome data (GB avg/min/max)",
                 _format_range(
                     parent_data["avg_data_gb"],
                     parent_data["min_data_gb"],

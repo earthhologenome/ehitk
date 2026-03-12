@@ -5,7 +5,7 @@
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/earthhologenome/ehitk)
 
-The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for finding, summarising and downloading data from EHI specimens, metagenomes and MAGs.
+The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for finding, summarising and downloading data from EHI specimens, hologenomes and MAGs.
 
 It is designed for two common workflows:
 
@@ -14,13 +14,13 @@ It is designed for two common workflows:
 
 ## Features
 
-- Query metagenomes by host metadata, sample type, biome, and release
-- Query metagenomes by host metadata, geography, specimen measurements, sample type, biome, and release
-- Query MAGs by taxonomy, parent metagenome, release, derived quality class, host taxonomy, geography, and specimen measurements
+- Query hologenomes by host metadata, sample type, biome, and release
+- Query hologenomes by host metadata, geography, specimen measurements, sample type, biome, and release
+- Query MAGs by taxonomy, parent hologenome, release, derived quality class, host taxonomy, geography, and specimen measurements
 - Query specimens directly, including specimen measurement ranges
-- Quantify available metagenome data volume (GB) in overview and stats outputs
+- Quantify available hologenome data volume (GB) in overview and stats outputs
 - Use friendly filters or an advanced `--where` SQL predicate
-- Download paired metagenome reads and MAG FASTA files
+- Download paired hologenome reads and MAG FASTA files
 - Show Rich progress bars with filename, progress, speed, and size
 - Append every fetch outcome to `manifest.jsonl`
 
@@ -50,7 +50,7 @@ Use a specific SQLite database file:
 
 ```bash
 ehitk --db /path/to/ehitk.sqlite --help
-ehitk metagenomes query --db /path/to/ehitk.sqlite --limit 5
+ehitk hologenomes query --db /path/to/ehitk.sqlite --limit 5
 ```
 
 ## Command Structure
@@ -61,7 +61,7 @@ ehitk metagenomes query --db /path/to/ehitk.sqlite --limit 5
 │  ├─ query
 │  ├─ values
 │  └─ stats
-├─ * metagenomes *
+├─ * hologenomes *
 │  ├─ query
 │  ├─ values
 │  ├─ stats
@@ -87,17 +87,17 @@ Explore specimen filter values:
 ehitk specimens values --field host_species --limit 10
 ```
 
-Query metagenomes:
+Query hologenomes:
 
 ```bash
-ehitk metagenomes query --host-species "Podarcis muralis" --limit 5
+ehitk hologenomes query --host-species "Podarcis muralis" --limit 5
 ```
 
-Explore metagenome values:
+Explore hologenome values:
 
 ```bash
-ehitk metagenomes values --field country --limit 10
-ehitk metagenomes values --field data --limit 10
+ehitk hologenomes values --field country --limit 10
+ehitk hologenomes values --field data --limit 10
 ```
 
 Query MAGs:
@@ -118,16 +118,16 @@ Summarize MAGs:
 ehitk mags stats --quality high --species "Escherichia coli"
 ```
 
-Fetch one metagenome:
+Fetch one hologenome:
 
 ```bash
-ehitk metagenomes fetch --host-lineage Reptilia --limit 1
+ehitk hologenomes fetch --host-lineage Reptilia --limit 1
 ```
 
-Write a metagenome batch download script instead of downloading immediately:
+Write a hologenome batch download script instead of downloading immediately:
 
 ```bash
-ehitk metagenomes fetch --host-lineage Reptilia --limit 1 --batch metagenomes.sh
+ehitk hologenomes fetch --host-lineage Reptilia --limit 1 --batch hologenomes.sh
 ```
 
 Fetch one MAG:
@@ -142,11 +142,11 @@ Write a MAG batch download script instead of downloading immediately:
 ehitk mags fetch --species "Escherichia coli" --limit 1 --batch mags.sh
 ```
 
-## Querying Metagenomes
+## Querying Hologenomes
 
-Supported metagenome filters:
+Supported hologenome filters:
 
-- `--metagenome-id`
+- `--hologenome-id`
 - `--host-taxid`
 - `--host-species`
 - `--host-lineage`
@@ -169,17 +169,17 @@ Supported metagenome filters:
 Examples:
 
 ```bash
-ehitk metagenomes query --metagenome-id EHI00001
-ehitk metagenomes query --host-taxid 64176
-ehitk metagenomes query --host-species "Podarcis muralis"
-ehitk metagenomes query --host-lineage Reptilia
-ehitk metagenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
-ehitk metagenomes query --country recIUTmSxiyqoU5lQ --latitude-min 42.7 --latitude-max 42.8
-ehitk metagenomes query --weight-min 3.0 --weight-max 6.0 --length-min 55 --length-max 65
-ehitk metagenomes query --metagenome-id EHI00001,EHI00002
+ehitk hologenomes query --hologenome-id EHI00001
+ehitk hologenomes query --host-taxid 64176
+ehitk hologenomes query --host-species "Podarcis muralis"
+ehitk hologenomes query --host-lineage Reptilia
+ehitk hologenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
+ehitk hologenomes query --country recIUTmSxiyqoU5lQ --latitude-min 42.7 --latitude-max 42.8
+ehitk hologenomes query --weight-min 3.0 --weight-max 6.0 --length-min 55 --length-max 65
+ehitk hologenomes query --hologenome-id EHI00001,EHI00002
 ```
 
-Most exact-match filters accept comma-separated values. For example, `--metagenome-id EHI00001,EHI00002` or `--host-species "Homo sapiens,Mus musculus"` matches any of the listed values.
+Most exact-match filters accept comma-separated values. For example, `--hologenome-id EHI00001,EHI00002` or `--host-species "Homo sapiens,Mus musculus"` matches any of the listed values.
 
 `--host-lineage` matches exactly against:
 
@@ -189,19 +189,19 @@ Most exact-match filters accept comma-separated values. For example, `--metageno
 - `host_order`
 - `host_class`
 
-Metagenome summary statistics:
+Hologenome summary statistics:
 
 ```bash
-ehitk metagenomes stats --host-species "Podarcis muralis"
+ehitk hologenomes stats --host-species "Podarcis muralis"
 ```
 
-Metagenome and MAG statistics include available metagenome data totals in gigabases (GB).
+Hologenome and MAG statistics include available hologenome data totals in gigabases (GB).
 
-Metagenome value summaries:
+Hologenome value summaries:
 
 ```bash
-ehitk metagenomes values --field host_species
-ehitk metagenomes values --field country --limit 20
+ehitk hologenomes values --field host_species
+ehitk hologenomes values --field country --limit 20
 ```
 
 ## Querying MAGs
@@ -217,7 +217,7 @@ Supported MAG filters:
 - `--host-lineage`
 - `--country`
 - `--release`
-- `--metagenome-id`
+- `--hologenome-id`
 - `--latitude-min`
 - `--latitude-max`
 - `--longitude-min`
@@ -239,7 +239,7 @@ ehitk mags query --mag-id EHM00001
 ehitk mags query --genus Escherichia
 ehitk mags query --species "Escherichia coli"
 ehitk mags query --host-species "Sciurus carolinensis"
-ehitk mags query --metagenome-id EHI00392
+ehitk mags query --hologenome-id EHI00392
 ehitk mags query --country recrACkHppgdXdQse --weight-min 630 --weight-max 690
 ehitk mags query --mag-id EHM00001,EHM00002
 ```
@@ -315,21 +315,21 @@ All `query` commands support `--columns`:
 
 - `--columns default`: use the configured default columns for that command
 - `--columns all`: include every available column in the query target
-- `--columns url`: use the URL-focused preset for `metagenomes` and `mags`
+- `--columns url`: use the URL-focused preset for `hologenomes` and `mags`
 - `--columns a,b,c`: include only the named columns
 
 These examples are equivalent:
 
 ```bash
-ehitk metagenomes query --host-species "Podarcis muralis"
-ehitk metagenomes query --host-species "Podarcis muralis" --columns default
+ehitk hologenomes query --host-species "Podarcis muralis"
+ehitk hologenomes query --host-species "Podarcis muralis" --columns default
 ```
 
 Examples:
 
 ```bash
 ehitk specimens query --columns specimen_id,host_species,sex --csv specimens.csv
-ehitk metagenomes query --columns url --csv metagenome_urls.csv
+ehitk hologenomes query --columns url --csv hologenome_urls.csv
 ehitk mags query --columns all --limit 1
 ehitk mags query --columns url --tsv mag_urls.tsv
 ehitk mags query --columns mag_id,host_species,mag_genus --limit 5
@@ -337,11 +337,11 @@ ehitk mags query --columns mag_id,host_species,mag_genus --limit 5
 
 Column presets are configured in `src/ehitk/data/custom_columns.json`.
 
-The default metagenome preset includes the `data` column so dataset size is visible without requesting extra columns.
+The default hologenome preset includes the `data` column so dataset size is visible without requesting extra columns.
 
 The `url` preset is only available for:
 
-- `metagenomes`
+- `hologenomes`
 - `mags`
 
 It is not available for `specimens`.
@@ -354,7 +354,7 @@ Examples:
 
 ```bash
 ehitk mags query --where "completeness >= 90 AND contamination <= 5"
-ehitk metagenomes query --where "latitude > 40 AND longitude < 10"
+ehitk hologenomes query --where "latitude > 40 AND longitude < 10"
 ehitk specimens query --where "weight IS NOT NULL"
 ```
 
@@ -374,17 +374,17 @@ For safety, EHItk rejects predicates containing:
 
 ## Fetching Data
 
-### Metagenomes
+### Hologenomes
 
-`ehitk metagenomes fetch` downloads paired-end reads from `url1` and `url2`.
+`ehitk hologenomes fetch` downloads paired-end reads from `url1` and `url2`.
 
 - records with missing read URLs are skipped
-- files are written under `downloads/metagenomes/<metagenome_id>/`
+- files are written under `downloads/hologenomes/<hologenome_id>/`
 
 Example:
 
 ```bash
-ehitk metagenomes fetch --host-species "Podarcis muralis" --limit 1
+ehitk hologenomes fetch --host-species "Podarcis muralis" --limit 1
 ```
 
 ### MAGs
@@ -414,7 +414,7 @@ Examples:
 
 ```bash
 ehitk mags fetch --genus Escherichia --limit 2 --output-dir results
-ehitk metagenomes fetch --release EHR01 --limit 1 --overwrite
+ehitk hologenomes fetch --release EHR01 --limit 1 --overwrite
 ehitk mags fetch --quality high --limit 10 --batch mags-downloads.sh
 ```
 
@@ -429,8 +429,8 @@ Typical fields:
 ```json
 {
   "timestamp": "2026-03-06T15:49:23.422576Z",
-  "type": "metagenome",
-  "metagenome_id": "EHI00366",
+  "type": "hologenome",
+  "hologenome_id": "EHI00366",
   "url": null,
   "path": null,
   "checksum": null,
@@ -440,7 +440,7 @@ Typical fields:
 
 The identifier field is entity-specific:
 
-- metagenome entries use `metagenome_id`
+- hologenome entries use `hologenome_id`
 - MAG entries use `mag_id`
 
 Possible statuses include:

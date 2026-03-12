@@ -45,37 +45,37 @@ def test_validate_where_clause_rejects_semicolon() -> None:
     raise AssertionError("Expected QueryValidationError for unsafe SQL")
 
 
-def test_build_query_for_metagenomes() -> None:
+def test_build_query_for_hologenomes() -> None:
     sql, params = build_query(
-        "metagenomes",
+        "hologenomes",
         filters={"host_species": "Podarcis muralis", "host_lineage": "Reptilia"},
         where="latitude > 40",
         limit=10,
     )
-    assert "FROM metagenomes_with_specimen" in sql
+    assert "FROM hologenomes_with_specimen" in sql
     assert "host_species" in sql
     assert "latitude > 40" in sql
     assert params[-1] == 10
 
 
-def test_query_rows_returns_metagenomes() -> None:
+def test_query_rows_returns_hologenomes() -> None:
     rows = query_rows(
         default_catalog_path(),
-        "metagenomes",
+        "hologenomes",
         filters={"host_species": "Podarcis muralis"},
         limit=2,
     )
     assert rows
-    assert rows[0]["metagenome_id"].startswith("EHI")
+    assert rows[0]["hologenome_id"].startswith("EHI")
 
 
-def test_query_rows_returns_metagenome_data_column() -> None:
+def test_query_rows_returns_hologenome_data_column() -> None:
     rows = query_rows(
         default_catalog_path(),
-        "metagenomes",
+        "hologenomes",
         filters={"host_species": "Podarcis muralis"},
         limit=2,
-        columns="metagenome_id,data",
+        columns="hologenome_id,data",
     )
     assert rows
     assert "data" in rows[0].keys()
@@ -116,11 +116,11 @@ def test_query_rows_returns_mags_with_host_taxonomy() -> None:
     assert rows[0]["host_species"] == "Sciurus carolinensis"
 
 
-def test_query_rows_filters_metagenomes_by_country_and_coordinate_range() -> None:
+def test_query_rows_filters_hologenomes_by_country_and_coordinate_range() -> None:
     sample = _sample_row(
         """
-        SELECT metagenome_id, country, latitude, longitude
-        FROM metagenomes_with_specimen
+        SELECT hologenome_id, country, latitude, longitude
+        FROM hologenomes_with_specimen
         WHERE country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
         LIMIT 1
         """
@@ -128,7 +128,7 @@ def test_query_rows_filters_metagenomes_by_country_and_coordinate_range() -> Non
 
     rows = query_rows(
         default_catalog_path(),
-        "metagenomes",
+        "hologenomes",
         filters={
             "country": sample["country"],
             "latitude_min": float(sample["latitude"]) - 0.01,
@@ -137,11 +137,11 @@ def test_query_rows_filters_metagenomes_by_country_and_coordinate_range() -> Non
             "longitude_max": float(sample["longitude"]) + 0.01,
         },
         limit=5,
-        columns="metagenome_id,country,latitude,longitude",
+        columns="hologenome_id,country,latitude,longitude",
     )
 
     assert rows
-    assert any(row["metagenome_id"] == sample["metagenome_id"] for row in rows)
+    assert any(row["hologenome_id"] == sample["hologenome_id"] for row in rows)
 
 
 def test_query_rows_filters_specimens_by_weight_and_length_range() -> None:
@@ -173,26 +173,26 @@ def test_query_rows_filters_specimens_by_weight_and_length_range() -> None:
     assert any(row["specimen_id"] == sample["specimen_id"] for row in rows)
 
 
-def test_query_rows_supports_comma_separated_metagenome_ids() -> None:
+def test_query_rows_supports_comma_separated_hologenome_ids() -> None:
     samples = _sample_rows(
         """
-        SELECT metagenome_id
-        FROM metagenomes_with_specimen
+        SELECT hologenome_id
+        FROM hologenomes_with_specimen
         LIMIT 2
         """
     )
-    requested_ids = ",".join(row["metagenome_id"] for row in samples)
+    requested_ids = ",".join(row["hologenome_id"] for row in samples)
 
     rows = query_rows(
         default_catalog_path(),
-        "metagenomes",
-        filters={"metagenome_id": requested_ids},
+        "hologenomes",
+        filters={"hologenome_id": requested_ids},
         limit=10,
-        columns="metagenome_id",
+        columns="hologenome_id",
     )
 
-    returned_ids = {row["metagenome_id"] for row in rows}
-    assert {row["metagenome_id"] for row in samples}.issubset(returned_ids)
+    returned_ids = {row["hologenome_id"] for row in rows}
+    assert {row["hologenome_id"] for row in samples}.issubset(returned_ids)
 
 
 def test_query_rows_supports_comma_separated_mag_ids() -> None:
@@ -218,13 +218,13 @@ def test_query_rows_supports_comma_separated_mag_ids() -> None:
 
 
 def test_headers_for_columns_default_and_all() -> None:
-    assert headers_for("metagenomes") == _default_columns("metagenomes")
-    assert headers_for("metagenomes") == headers_for("metagenomes", columns="default")
-    assert "data" in headers_for("metagenomes", columns="all")
+    assert headers_for("hologenomes") == _default_columns("hologenomes")
+    assert headers_for("hologenomes") == headers_for("hologenomes", columns="default")
+    assert "data" in headers_for("hologenomes", columns="all")
     assert "data" in headers_for("mags", columns="all")
-    assert "host_class" in headers_for("metagenomes", columns="all")
-    assert headers_for("metagenomes", columns="url") == (
-        "metagenome_id",
+    assert "host_class" in headers_for("hologenomes", columns="all")
+    assert headers_for("hologenomes", columns="url") == (
+        "hologenome_id",
         "url1",
         "url2",
     )

@@ -10,7 +10,7 @@ import typer
 
 from ehitk import __version__
 from ehitk.mags.commands import app as mags_app
-from ehitk.metagenomes.commands import app as metagenomes_app
+from ehitk.hologenomes.commands import app as hologenomes_app
 from ehitk.specimens.commands import app as specimens_app
 from ehitk.query import resolve_catalog_path
 
@@ -21,7 +21,7 @@ app = typer.Typer(
 )
 
 app.add_typer(specimens_app, name="specimens")
-app.add_typer(metagenomes_app, name="metagenomes")
+app.add_typer(hologenomes_app, name="hologenomes")
 app.add_typer(mags_app, name="mags")
 
 
@@ -70,7 +70,7 @@ def _print_root_overview(database_path: Path) -> None:
         )
     )
     console.print(
-        "Query, summarize, and fetch specimens, metagenomes, and MAGs from the EHI."
+        "Query, summarize, and fetch specimens, hologenomes, and MAGs from the EHI."
     )
     console.print()
 
@@ -95,25 +95,25 @@ def _catalog_summary(database_path: Path) -> tuple[dict[str, str], ...]:
             FROM specimens
             """
         ).fetchone()
-        metagenomes = connection.execute(
+        hologenomes = connection.execute(
             """
             SELECT
                 COUNT(*) AS records,
                 SUM(CASE WHEN url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> '' THEN 1 ELSE 0 END) AS paired_urls,
                 SUM(data) AS total_data_gb
-            FROM metagenomes
+            FROM hologenomes
             """
         ).fetchone()
         mags = connection.execute(
             """
             SELECT
                 (SELECT COUNT(*) FROM mags) AS records,
-                COUNT(*) AS parent_metagenomes,
+                COUNT(*) AS parent_hologenomes,
                 SUM(data) AS total_parent_data_gb
             FROM (
-                SELECT DISTINCT metagenome_id, data
-                FROM mags_with_metagenome
-                WHERE metagenome_id IS NOT NULL
+                SELECT DISTINCT hologenome_id, data
+                FROM mags_with_hologenome
+                WHERE hologenome_id IS NOT NULL
             )
             """
         ).fetchone()
@@ -125,17 +125,17 @@ def _catalog_summary(database_path: Path) -> tuple[dict[str, str], ...]:
             "summary": f"{specimens[1]:,} host species",
         },
         {
-            "level": "Metagenomes",
-            "records": f"{metagenomes[0]:,}",
+            "level": "Hologenomes",
+            "records": f"{hologenomes[0]:,}",
             "summary": (
-                f"{metagenomes[1]:,} paired read sets, {_format_gb(metagenomes[2])} GB"
+                f"{hologenomes[1]:,} paired read sets, {_format_gb(hologenomes[2])} GB"
             ),
         },
         {
             "level": "MAGs",
             "records": f"{mags[0]:,}",
             "summary": (
-                f"{mags[1]:,} parent metagenomes, {_format_gb(mags[2])} GB"
+                f"{mags[1]:,} parent hologenomes, {_format_gb(mags[2])} GB"
             ),
         },
     )

@@ -62,48 +62,48 @@ def test_root_command_shows_overview_in_fixed_order() -> None:
     result = runner.invoke(app, [])
     assert result.exit_code == 0
     assert "Earth Hologenome Initiative ToolKit" in result.output
-    assert "Query, summarize, and fetch specimens, metagenomes, and MAGs" in result.output
+    assert "Query, summarize, and fetch specimens, hologenomes, and MAGs" in result.output
     assert "Level" in result.output
     assert "Records" in result.output
     assert "Summary" in result.output
 
     specimens_index = result.output.rindex("Specimens")
-    metagenomes_index = result.output.rindex("Metagenomes")
+    hologenomes_index = result.output.rindex("Hologenomes")
     mags_index = result.output.rindex("MAGs")
-    assert specimens_index < metagenomes_index < mags_index
+    assert specimens_index < hologenomes_index < mags_index
 
     specimens = _root_summary_row("SELECT COUNT(*) AS records FROM specimens")
-    metagenomes = _root_summary_row(
+    hologenomes = _root_summary_row(
         """
         SELECT
             COUNT(*) AS records,
             SUM(CASE WHEN url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> '' THEN 1 ELSE 0 END) AS paired_urls,
             SUM(data) AS total_data_gb
-        FROM metagenomes
+        FROM hologenomes
         """
     )
     mags = _root_summary_row(
         """
         SELECT
             (SELECT COUNT(*) FROM mags) AS records,
-            COUNT(*) AS parent_metagenomes,
+            COUNT(*) AS parent_hologenomes,
             SUM(data) AS total_parent_data_gb
         FROM (
-            SELECT DISTINCT metagenome_id, data
-            FROM mags_with_metagenome
-            WHERE metagenome_id IS NOT NULL
+            SELECT DISTINCT hologenome_id, data
+            FROM mags_with_hologenome
+            WHERE hologenome_id IS NOT NULL
         )
         """
     )
     assert f"{specimens['records']:,}" in result.output
-    assert f"{metagenomes['records']:,}" in result.output
+    assert f"{hologenomes['records']:,}" in result.output
     assert f"{mags['records']:,}" in result.output
     assert (
-        f"{metagenomes['paired_urls']:,} paired read sets, "
-        f"{_format_gb(metagenomes['total_data_gb'])} GB"
+        f"{hologenomes['paired_urls']:,} paired read sets, "
+        f"{_format_gb(hologenomes['total_data_gb'])} GB"
     ) in result.output
     assert (
-        f"{mags['parent_metagenomes']:,} parent metagenomes, "
+        f"{mags['parent_hologenomes']:,} parent hologenomes, "
         f"{_format_gb(mags['total_parent_data_gb'])} GB"
     ) in result.output
 
@@ -119,9 +119,9 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
     assert "--show-completion" not in output
 
     specimens_index = output.index("specimens")
-    metagenomes_index = output.index("metagenomes")
+    hologenomes_index = output.index("hologenomes")
     mags_index = output.index("mags")
-    assert specimens_index < metagenomes_index < mags_index
+    assert specimens_index < hologenomes_index < mags_index
 
 
 def test_root_version_option() -> None:
@@ -135,10 +135,10 @@ def test_package_version_matches_pyproject() -> None:
     assert f'version = "{__version__}"' in pyproject
 
 
-def test_metagenomes_query_cli() -> None:
+def test_hologenomes_query_cli() -> None:
     result = runner.invoke(
         app,
-        ["metagenomes", "query", "--host-species", "Podarcis muralis", "--limit", "1"],
+        ["hologenomes", "query", "--host-species", "Podarcis muralis", "--limit", "1"],
     )
     assert result.exit_code == 0
     assert "EHI" in result.stdout
@@ -162,11 +162,11 @@ def test_specimens_query_cli() -> None:
     assert "SD" in result.stdout
 
 
-def test_metagenomes_query_cli_supports_country_and_coordinate_ranges() -> None:
+def test_hologenomes_query_cli_supports_country_and_coordinate_ranges() -> None:
     sample = _sample_row(
         """
-        SELECT metagenome_id, country, latitude, longitude
-        FROM metagenomes_with_specimen
+        SELECT hologenome_id, country, latitude, longitude
+        FROM hologenomes_with_specimen
         WHERE country IS NOT NULL AND latitude IS NOT NULL AND longitude IS NOT NULL
         LIMIT 1
         """
@@ -174,7 +174,7 @@ def test_metagenomes_query_cli_supports_country_and_coordinate_ranges() -> None:
     result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "query",
             "--country",
             sample["country"],
@@ -189,11 +189,11 @@ def test_metagenomes_query_cli_supports_country_and_coordinate_ranges() -> None:
             "--limit",
             "1",
             "--columns",
-            "metagenome_id,country,latitude,longitude",
+            "hologenome_id,country,latitude,longitude",
         ],
     )
     assert result.exit_code == 0
-    assert sample["metagenome_id"] in result.stdout
+    assert sample["hologenome_id"] in result.stdout
 
 
 def test_specimens_query_cli_supports_weight_and_length_ranges() -> None:
@@ -235,7 +235,7 @@ def test_mags_query_cli_supports_country_and_weight_ranges() -> None:
         """
         SELECT m.mag_id, mgws.country, mgws.weight
         FROM mags AS m
-        JOIN metagenomes_with_specimen AS mgws ON m.metagenome_id = mgws.metagenome_id
+        JOIN hologenomes_with_specimen AS mgws ON m.hologenome_id = mgws.hologenome_id
         WHERE mgws.country IS NOT NULL AND mgws.weight IS NOT NULL
         LIMIT 1
         """
@@ -280,10 +280,10 @@ def test_mags_query_cli_with_host_filter() -> None:
     assert "EHM" in result.stdout
 
 
-def test_metagenomes_values_cli() -> None:
+def test_hologenomes_values_cli() -> None:
     result = runner.invoke(
         app,
-        ["metagenomes", "values", "--field", "host_species", "--limit", "3"],
+        ["hologenomes", "values", "--field", "host_species", "--limit", "3"],
     )
     assert result.exit_code == 0
     assert "value" in result.output.lower()
@@ -328,25 +328,25 @@ def test_values_cli_rejects_unknown_field() -> None:
     assert "Unknown values field for mags: nope." in result.output
 
 
-def test_metagenomes_query_cli_supports_metagenome_id_flag_with_multiple_values(tmp_path) -> None:
+def test_hologenomes_query_cli_supports_hologenome_id_flag_with_multiple_values(tmp_path) -> None:
     samples = _sample_rows(
         """
-        SELECT metagenome_id
-        FROM metagenomes_with_specimen
+        SELECT hologenome_id
+        FROM hologenomes_with_specimen
         LIMIT 2
         """
     )
-    requested_ids = ",".join(row["metagenome_id"] for row in samples)
-    output_path = tmp_path / "metagenome-ids.csv"
+    requested_ids = ",".join(row["hologenome_id"] for row in samples)
+    output_path = tmp_path / "hologenome-ids.csv"
     result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "query",
-            "--metagenome-id",
+            "--hologenome-id",
             requested_ids,
             "--columns",
-            "metagenome_id",
+            "hologenome_id",
             "--csv",
             str(output_path),
         ],
@@ -354,7 +354,7 @@ def test_metagenomes_query_cli_supports_metagenome_id_flag_with_multiple_values(
     assert result.exit_code == 0
     contents = output_path.read_text(encoding="utf-8")
     for sample in samples:
-        assert sample["metagenome_id"] in contents
+        assert sample["hologenome_id"] in contents
 
 
 def test_mags_query_cli_supports_mag_id_flag_with_multiple_values(tmp_path) -> None:
@@ -386,12 +386,12 @@ def test_mags_query_cli_supports_mag_id_flag_with_multiple_values(tmp_path) -> N
         assert sample["mag_id"] in contents
 
 
-def test_metagenomes_query_cli_writes_csv(tmp_path) -> None:
-    output_path = tmp_path / "metagenomes.csv"
+def test_hologenomes_query_cli_writes_csv(tmp_path) -> None:
+    output_path = tmp_path / "hologenomes.csv"
     result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "query",
             "--host-species",
             "Podarcis muralis",
@@ -404,7 +404,7 @@ def test_metagenomes_query_cli_writes_csv(tmp_path) -> None:
     assert result.exit_code == 0
     assert output_path.exists()
     contents = output_path.read_text(encoding="utf-8")
-    assert "metagenome_id" in contents
+    assert "hologenome_id" in contents
     assert "Podarcis muralis" in contents
     assert "Wrote 1 rows" in result.stdout
 
@@ -451,13 +451,13 @@ def test_query_cli_rejects_csv_and_tsv_together(tmp_path) -> None:
 
 
 def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
-    default_output_path = tmp_path / "metagenomes-default.csv"
-    implicit_output_path = tmp_path / "metagenomes-implicit.csv"
+    default_output_path = tmp_path / "hologenomes-default.csv"
+    implicit_output_path = tmp_path / "hologenomes-implicit.csv"
 
     default_result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "query",
             "--host-species",
             "Podarcis muralis",
@@ -472,7 +472,7 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
     implicit_result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "query",
             "--host-species",
             "Podarcis muralis",
@@ -486,7 +486,7 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
     assert implicit_result.exit_code == 0
     assert default_output_path.read_text(encoding="utf-8") == implicit_output_path.read_text(encoding="utf-8")
     contents = default_output_path.read_text(encoding="utf-8").splitlines()
-    assert contents[0] == ",".join(_default_columns("metagenomes"))
+    assert contents[0] == ",".join(_default_columns("hologenomes"))
 
 
 def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:
@@ -511,12 +511,12 @@ def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:
     assert contents.splitlines()[0] == "mag_id,host_species,mag_genus"
 
 
-def test_query_cli_writes_url_preset_for_metagenomes(tmp_path) -> None:
-    output_path = tmp_path / "metagenomes-url.csv"
+def test_query_cli_writes_url_preset_for_hologenomes(tmp_path) -> None:
+    output_path = tmp_path / "hologenomes-url.csv"
     result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "query",
             "--host-species",
             "Podarcis muralis",
@@ -530,7 +530,7 @@ def test_query_cli_writes_url_preset_for_metagenomes(tmp_path) -> None:
     )
     assert result.exit_code == 0
     contents = output_path.read_text(encoding="utf-8")
-    assert contents.splitlines()[0] == "metagenome_id,url1,url2"
+    assert contents.splitlines()[0] == "hologenome_id,url1,url2"
 
 
 def test_query_cli_writes_url_preset_for_mags(tmp_path) -> None:
@@ -613,25 +613,25 @@ def test_query_cli_rejects_url_preset_for_specimens() -> None:
     assert "Available presets: default." in result.output
 
 
-def test_metagenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
+def test_hologenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
     sample = _sample_row(
         """
-        SELECT metagenome_id
-        FROM metagenomes_with_specimen
+        SELECT hologenome_id
+        FROM hologenomes_with_specimen
         WHERE url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> ''
         LIMIT 1
         """
     )
     db_path = Path("data/ehitk.sqlite").resolve()
-    batch_path = tmp_path / "metagenomes-fetch.sh"
+    batch_path = tmp_path / "hologenomes-fetch.sh"
     manifest_path = tmp_path / "manifest.jsonl"
     result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "fetch",
-            "--metagenome-id",
-            sample["metagenome_id"],
+            "--hologenome-id",
+            sample["hologenome_id"],
             "--batch",
             str(batch_path),
             "--manifest-path",
@@ -645,7 +645,7 @@ def test_metagenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
     contents = batch_path.read_text(encoding="utf-8")
     assert contents.startswith("#!/usr/bin/env bash")
     assert contents.count("curl --fail --location --output") == 2
-    assert sample["metagenome_id"] in contents
+    assert sample["hologenome_id"] in contents
     assert "Wrote batch download script with 2 files" in result.output
     assert not manifest_path.exists()
 
@@ -684,11 +684,11 @@ def test_mags_fetch_cli_writes_batch_script(tmp_path) -> None:
     assert not manifest_path.exists()
 
 
-def test_metagenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -> None:
+def test_hologenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -> None:
     sample = _sample_row(
         """
-        SELECT metagenome_id
-        FROM metagenomes_with_specimen
+        SELECT hologenome_id
+        FROM hologenomes_with_specimen
         WHERE url1 IS NULL AND url2 IS NULL
         LIMIT 1
         """
@@ -698,10 +698,10 @@ def test_metagenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -
     result = runner.invoke(
         app,
         [
-            "metagenomes",
+            "hologenomes",
             "fetch",
-            "--metagenome-id",
-            sample["metagenome_id"],
+            "--hologenome-id",
+            sample["hologenome_id"],
             "--batch",
             str(batch_path),
             "--manifest-path",
@@ -717,13 +717,13 @@ def test_metagenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -
     assert not manifest_path.exists()
 
 
-def test_metagenomes_stats_cli() -> None:
+def test_hologenomes_stats_cli() -> None:
     result = runner.invoke(
         app,
-        ["metagenomes", "stats", "--host-species", "Podarcis muralis"],
+        ["hologenomes", "stats", "--host-species", "Podarcis muralis"],
     )
     assert result.exit_code == 0
-    assert "Matched metagenomes:" in result.output
+    assert "Matched hologenomes:" in result.output
     assert "Available data (GB total):" in result.output
     assert "Top sample types" in result.output
 
@@ -735,7 +735,7 @@ def test_mags_stats_cli_allows_combined_filters() -> None:
     )
     assert result.exit_code == 0
     assert "Matched MAGs:" in result.output
-    assert "Parent metagenome data (GB total):" in result.output
+    assert "Parent hologenome data (GB total):" in result.output
     assert "Quality" in result.output
     assert "distribution" in result.output
 

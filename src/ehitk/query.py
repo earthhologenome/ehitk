@@ -32,8 +32,8 @@ MAGS_WITH_SPECIMEN_SOURCE = """
         m."mag_genus",
         m."url",
         m."mag_species",
-        m."metagenome_id",
-        mgws."release" AS "metagenome_release",
+        m."hologenome_id",
+        mgws."release" AS "hologenome_release",
         mgws."sample_type" AS "sample_type",
         mgws."latitude" AS "latitude",
         mgws."longitude" AS "longitude",
@@ -54,7 +54,7 @@ MAGS_WITH_SPECIMEN_SOURCE = """
         mgws."length" AS "length",
         mgws."sex" AS "sex"
     FROM "mags" AS m
-    LEFT JOIN "metagenomes_with_specimen" AS mgws ON m."metagenome_id" = mgws."metagenome_id"
+    LEFT JOIN "hologenomes_with_specimen" AS mgws ON m."hologenome_id" = mgws."hologenome_id"
 )
 """
 
@@ -88,10 +88,10 @@ def _taxonomy_select(column: str, prefix: str, alias: str) -> str:
 
 
 TARGETS: dict[str, TargetConfig] = {
-    "metagenomes": TargetConfig(
-        source="metagenomes_with_specimen",
+    "hologenomes": TargetConfig(
+        source="hologenomes_with_specimen",
         query_columns={
-            "metagenome_id": "metagenome_id",
+            "hologenome_id": "hologenome_id",
             "release": "release",
             "sample_type": "sample_type",
             "latitude": "latitude",
@@ -114,7 +114,7 @@ TARGETS: dict[str, TargetConfig] = {
             "sex": "sex",
         },
         all_query_headers=(
-            "metagenome_id",
+            "hologenome_id",
             "release",
             "sample_type",
             "latitude",
@@ -137,7 +137,7 @@ TARGETS: dict[str, TargetConfig] = {
             "sex",
         ),
         fetch_select=(
-            "metagenome_id",
+            "hologenome_id",
             "specimen_id",
             "release",
             "sample_type",
@@ -151,7 +151,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url2",
         ),
         fetch_headers=(
-            "metagenome_id",
+            "hologenome_id",
             "specimen_id",
             "release",
             "sample_type",
@@ -164,8 +164,8 @@ TARGETS: dict[str, TargetConfig] = {
             "url1",
             "url2",
         ),
-        order_by="metagenome_id",
-        primary_id="metagenome_id",
+        order_by="hologenome_id",
+        primary_id="hologenome_id",
     ),
     "mags": TargetConfig(
         source=MAGS_WITH_SPECIMEN_SOURCE,
@@ -186,8 +186,8 @@ TARGETS: dict[str, TargetConfig] = {
             "mag_genus": _taxonomy_select("mag_genus", "g__", "mag_genus"),
             "url": "url",
             "mag_species": _taxonomy_select("mag_species", "s__", "mag_species"),
-            "metagenome_id": "metagenome_id",
-            "metagenome_release": "metagenome_release",
+            "hologenome_id": "hologenome_id",
+            "hologenome_release": "hologenome_release",
             "sample_type": "sample_type",
             "latitude": "latitude",
             "longitude": "longitude",
@@ -225,8 +225,8 @@ TARGETS: dict[str, TargetConfig] = {
             "mag_genus",
             "url",
             "mag_species",
-            "metagenome_id",
-            "metagenome_release",
+            "hologenome_id",
+            "hologenome_release",
             "sample_type",
             "latitude",
             "longitude",
@@ -249,7 +249,7 @@ TARGETS: dict[str, TargetConfig] = {
         ),
         fetch_select=(
             "mag_id",
-            "metagenome_id",
+            "hologenome_id",
             "release",
             "completeness",
             "contamination",
@@ -265,7 +265,7 @@ TARGETS: dict[str, TargetConfig] = {
         ),
         fetch_headers=(
             "mag_id",
-            "metagenome_id",
+            "hologenome_id",
             "release",
             "completeness",
             "contamination",
@@ -338,7 +338,7 @@ TARGETS: dict[str, TargetConfig] = {
 }
 
 VALUE_FIELD_ALIASES: dict[str, dict[str, str]] = {
-    "metagenomes": {},
+    "hologenomes": {},
     "mags": {
         "genus": "mag_genus",
         "species": "mag_species",
@@ -636,8 +636,8 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
             for _ in lineage_columns:
                 parameters.extend(host_lineage_values)
 
-    if target == "metagenomes":
-        add_exact("metagenome_id", filters.get("metagenome_id"))
+    if target == "hologenomes":
+        add_exact("hologenome_id", filters.get("hologenome_id"))
         add_host_taxonomy_filters()
         add_exact("sample_type", filters.get("sample_type"))
         add_exact("biome", filters.get("biome"))
@@ -651,7 +651,7 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
     elif target == "mags":
         add_exact("mag_id", filters.get("mag_id"))
         add_exact("release", filters.get("release"))
-        add_exact("metagenome_id", filters.get("metagenome_id"))
+        add_exact("hologenome_id", filters.get("hologenome_id"))
         add_host_taxonomy_filters()
         add_exact("country", filters.get("country"))
         add_numeric_range("latitude", filters.get("latitude_min"), filters.get("latitude_max"))

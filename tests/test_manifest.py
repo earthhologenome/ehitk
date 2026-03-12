@@ -3,21 +3,21 @@ import json
 from ehitk.manifest import ManifestEntry, append_manifest_entry
 
 
-def test_manifest_entry_uses_entity_specific_metagenome_key() -> None:
+def test_manifest_entry_uses_entity_specific_hologenome_key() -> None:
     entry = ManifestEntry(
-        entry_type="metagenome",
-        id_field="metagenome_id",
+        entry_type="hologenome",
+        id_field="hologenome_id",
         id_value="EHI00001",
         url="ftp://example.org/read_1.fastq.gz",
-        path="downloads/metagenomes/EHI00001/read_1.fastq.gz",
+        path="downloads/hologenomes/EHI00001/read_1.fastq.gz",
         checksum="abc123",
         status="downloaded",
     )
 
     payload = entry.as_dict()
 
-    assert payload["type"] == "metagenome"
-    assert payload["metagenome_id"] == "EHI00001"
+    assert payload["type"] == "hologenome"
+    assert payload["hologenome_id"] == "EHI00001"
     assert "genome_id" not in payload
 
 

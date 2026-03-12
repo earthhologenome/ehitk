@@ -41,7 +41,7 @@ jobs:
           ehitk --help
           ehitk specimens query --host-species "Podarcis muralis" --limit 1
           ehitk specimens stats --host-species "Podarcis muralis"
-          ehitk metagenomes query --host-species "Podarcis muralis" --limit 1
-          ehitk metagenomes stats --host-species "Podarcis muralis"
+          ehitk hologenomes query --host-species "Podarcis muralis" --limit 1
+          ehitk hologenomes stats --host-species "Podarcis muralis"
           ehitk mags query --genus Escherichia --limit 1
           ehitk mags stats --quality high --species "Escherichia coli"

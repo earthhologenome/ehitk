@@ -1,7 +1,7 @@
 {
-  "metagenomes": {
+  "hologenomes": {
     "default": [
-      "metagenome_id",
+      "hologenome_id",
       "specimen_id",
       "sample_type",
       "host_species",
@@ -9,7 +9,7 @@
       "data"
     ],
     "url": [
-      "metagenome_id",
+      "hologenome_id",
       "url1",
       "url2"
     ]

@@ -64,7 +64,7 @@ def main() -> None:
         archives = Internet("Remote archives\nFTP + HTTP(S)")
 
         with Cluster("Earth Hologenome Initiative ToolKit"):
-            cli = Python("ehitk CLI\nspecimens | metagenomes | mags")
+            cli = Python("ehitk CLI\nspecimens | hologenomes | mags")
             metadata = Python("Metadata layer\nquery + stats")
             fetch = Python("Download layer\nfetch")
 

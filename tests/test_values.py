@@ -2,10 +2,10 @@ from ehitk.query import default_catalog_path
 from ehitk.values import value_rows
 
 
-def test_value_rows_returns_metagenome_host_species_counts() -> None:
+def test_value_rows_returns_hologenome_host_species_counts() -> None:
     field, rows = value_rows(
         str(default_catalog_path()),
-        target="metagenomes",
+        target="hologenomes",
         field="host_species",
         limit=5,
     )
@@ -14,10 +14,10 @@ def test_value_rows_returns_metagenome_host_species_counts() -> None:
     assert rows[0]["count"] >= 1
 
 
-def test_value_rows_returns_metagenome_data_counts() -> None:
+def test_value_rows_returns_hologenome_data_counts() -> None:
     field, rows = value_rows(
         str(default_catalog_path()),
-        target="metagenomes",
+        target="hologenomes",
         field="data",
         limit=5,
     )
