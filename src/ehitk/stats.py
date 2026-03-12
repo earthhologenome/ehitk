@@ -103,19 +103,25 @@ def _render_hologenome_stats(
         console,
         "Top sample types",
         "sample_type",
-        _top_counts(connection, base_sql, parameters, "sample_type"),
+        _top_counts_with_data(connection, base_sql, parameters, "sample_type"),
+        aggregate_header="data_gb",
+        aggregate_key="data_gb",
     )
     _render_breakdown(
         console,
         "Top host species",
         "host_species",
-        _top_counts(connection, base_sql, parameters, "host_species"),
+        _top_counts_with_data(connection, base_sql, parameters, "host_species"),
+        aggregate_header="data_gb",
+        aggregate_key="data_gb",
     )
     _render_breakdown(
         console,
         "Top biomes",
         "biome",
-        _top_counts(connection, base_sql, parameters, "biome"),
+        _top_counts_with_data(connection, base_sql, parameters, "biome"),
+        aggregate_header="data_gb",
+        aggregate_key="data_gb",
     )
 
 
@@ -304,6 +310,9 @@ def _render_breakdown(
     title: str,
     value_header: str,
     rows: list[sqlite3.Row],
+    *,
+    aggregate_header: str | None = None,
+    aggregate_key: str | None = None,
 ) -> None:
     if not rows:
         return
@@ -311,8 +320,13 @@ def _render_breakdown(
     table = Table(title=title)
     table.add_column(value_header)
     table.add_column("count", justify="right")
+    if aggregate_header is not None and aggregate_key is not None:
+        table.add_column(aggregate_header, justify="right")
     for row in rows:
-        table.add_row(str(row["value"]), str(row["count"]))
+        rendered_row = [str(row["value"]), str(row["count"])]
+        if aggregate_header is not None and aggregate_key is not None:
+            rendered_row.append(_format_gb(row[aggregate_key]))
+        table.add_row(*rendered_row)
     console.print(table)
 
 
@@ -330,6 +344,30 @@ def _top_counts(
         SELECT
             COALESCE(NULLIF(CAST({expression} AS TEXT), ''), '<missing>') AS value,
             COUNT(*) AS count
+        FROM ({base_sql}) AS filtered
+        GROUP BY value
+        ORDER BY count DESC, value ASC
+        LIMIT ?
+        """,
+        [*parameters, limit],
+    )
+
+
+def _top_counts_with_data(
+    connection: sqlite3.Connection,
+    base_sql: str,
+    parameters: list[Any],
+    expression: str,
+    *,
+    limit: int = TOP_BREAKDOWN_ROWS,
+) -> list[sqlite3.Row]:
+    return _fetchall(
+        connection,
+        f"""
+        SELECT
+            COALESCE(NULLIF(CAST({expression} AS TEXT), ''), '<missing>') AS value,
+            COUNT(*) AS count,
+            COALESCE(SUM(COALESCE(data, 0)), 0) AS data_gb
         FROM ({base_sql}) AS filtered
         GROUP BY value
         ORDER BY count DESC, value ASC

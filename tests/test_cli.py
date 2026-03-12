@@ -726,6 +726,7 @@ def test_hologenomes_stats_cli() -> None:
     assert "Matched hologenomes:" in result.output
     assert "Available data (GB total):" in result.output
     assert "Top sample types" in result.output
+    assert "data_gb" in result.output
 
 
 def test_mags_stats_cli_allows_combined_filters() -> None:
