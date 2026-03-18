@@ -10,6 +10,13 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.0.3] - 2026-03-18
+
+### Fixed
+
+- Installed test dependencies in the GitHub release workflow so tag-based releases can run `pytest` before building and publishing.
+- Updated the local release preparation guidance to use both development and release extras.
+- Improved the release script error message so missing `pytest` points to the correct dependency install command.
 ## [1.0.2] - 2026-03-18
 
 ### Fixed
