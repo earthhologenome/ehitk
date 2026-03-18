@@ -1,15 +1,8 @@
 # Changelog
 
-All notable changes to EHItk should be documented in this file.
+All notable changes to EHItk are documented in this file.
 
 The format follows Keep a Changelog principles and the project versions follow Semantic Versioning.
-
-For each new release:
-
-1. Add changes under `Unreleased` while developing.
-2. Move them into a new versioned section on release.
-3. Update `pyproject.toml` to the released version.
-4. Create the matching Git tag and release entry.
 
 ## [Unreleased]
 
@@ -17,6 +10,16 @@ For each new release:
 
 - No unreleased changes yet.
 
+## [1.0.2] - 2026-03-18
+
+### Fixed
+
+- Added the missing GitHub release workflow to the repository so tag-based PyPI publishing can run.
+- Added the release tooling files required for automated publication.
+
+### Changed
+
+- Prepared the project for the next PyPI release after the incomplete 1.0.1 tag.
 ## [1.0.1] - 2026-03-18
 
 ### Added
