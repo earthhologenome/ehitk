@@ -123,6 +123,7 @@ def main() -> int:
         CHANGELOG_PATH.write_text(changelog_after, encoding="utf-8")
 
     if plan.run_tests:
+        require_module("pytest")
         run_command([sys.executable, "-m", "pytest"])
     if plan.run_build:
         require_module("build")
@@ -236,9 +237,14 @@ def require_module(module_name: str) -> None:
     )
     if result.returncode == 0:
         return
+    install_hint = {
+        "pytest": ".[dev,release]",
+        "build": ".[release]",
+        "twine": ".[release]",
+    }.get(module_name, ".[release]")
     raise ReleaseError(
-        f"Missing required module '{module_name}'. Install release tooling with: "
-        f"{sys.executable} -m pip install '.[release]'"
+        f"Missing required module '{module_name}'. Install the required tooling with: "
+        f"{sys.executable} -m pip install '{install_hint}'"
     )
 
 

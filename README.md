@@ -62,7 +62,7 @@ EHItk includes a release preparation script and a tag-triggered PyPI workflow.
 Prepare a new release locally:
 
 ```bash
-python3 -m pip install ".[release]"
+python3 -m pip install ".[dev,release]"
 python3 scripts/release.py 1.0.2
 ```
 
