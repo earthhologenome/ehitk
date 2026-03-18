@@ -1,0 +1,53 @@
+from __future__ import annotations
+
+import importlib.util
+from pathlib import Path
+import sys
+
+
+def _load_release_module():
+    module_path = Path("scripts/release.py")
+    spec = importlib.util.spec_from_file_location("ehitk_release_script", module_path)
+    if spec is None or spec.loader is None:
+        raise AssertionError("Could not load scripts/release.py for testing.")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_update_pyproject_version_rewrites_single_version_line() -> None:
+    release = _load_release_module()
+    content = '[project]\nname = "ehitk"\nversion = "1.0.1"\n'
+    updated = release.update_pyproject_version(content, "1.0.2")
+    assert 'version = "1.0.2"' in updated
+    assert 'version = "1.0.1"' not in updated
+
+
+def test_release_changelog_moves_unreleased_section_into_new_version() -> None:
+    release = _load_release_module()
+    content = """# Changelog
+
+## [Unreleased]
+
+### Added
+
+- New feature
+
+### Fixed
+
+- Important bug fix
+
+## [1.0.1] - 2026-03-18
+
+### Added
+
+- Previous release item
+"""
+    updated = release.release_changelog(content, "1.0.2", "2026-03-19")
+    assert "## [Unreleased]" in updated
+    assert "- No unreleased changes yet." in updated
+    assert "## [1.0.2] - 2026-03-19" in updated
+    assert "- New feature" in updated
+    assert "- Important bug fix" in updated
+    assert "## [1.0.1] - 2026-03-18" in updated

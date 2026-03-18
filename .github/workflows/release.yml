@@ -1,0 +1,80 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install release dependencies
+        run: python -m pip install ".[release]"
+
+      - name: Verify packaged database is present
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          packaged = Path("src/ehitk/data/ehitk.sqlite")
+          if not packaged.exists():
+              raise SystemExit(
+                  "src/ehitk/data/ehitk.sqlite is missing. "
+                  "The packaged SQLite catalog must be present before tagging a release."
+              )
+          PY
+
+      - name: Run test suite
+        run: python -m pytest
+
+      - name: Build sdist and wheel
+        run: python -m build
+
+      - name: Validate distributions
+        run: python -m twine check dist/*
+
+      - name: Smoke test built wheel
+        run: |
+          python -m pip install --force-reinstall dist/*.whl
+          ehitk --help
+          ehitk specimens query --host-species "Podarcis muralis" --limit 1
+          ehitk hologenomes query --host-species "Podarcis muralis" --limit 1
+          ehitk mags query --genus Escherichia --limit 1
+
+      - name: Upload distributions
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    environment: pypi
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
