@@ -351,6 +351,11 @@ JSON_ARRAY_VALUE_FIELDS = {"weight", "length"}
 
 
 def default_catalog_path() -> Path:
+    # Always prefer the packaged catalog that ships with the installed EHItk
+    # version. This ensures `pip install -U ehitk` or a new wheel install picks
+    # up the matching SQLite bundle instead of an unrelated checkout-level file.
+    if PACKAGE_CATALOG_PATH.exists():
+        return PACKAGE_CATALOG_PATH
     if REPO_CATALOG_PATH.exists():
         return REPO_CATALOG_PATH
     return PACKAGE_CATALOG_PATH

@@ -7,12 +7,11 @@ from typer.testing import CliRunner
 
 from ehitk import __version__
 from ehitk.cli import app
+from ehitk.query import default_catalog_path
 
 runner = CliRunner()
 ANSI_PATTERN = re.compile(r"\x1b\[[0-9;?]*[ -/]*[@-~]")
-ROOT_DB_PATH = Path("data/ehitk.sqlite")
-if not ROOT_DB_PATH.exists():
-    ROOT_DB_PATH = Path("src/ehitk/data/ehitk.sqlite")
+ROOT_DB_PATH = default_catalog_path()
 
 
 def _strip_ansi(text: str) -> str:
@@ -32,7 +31,7 @@ def _default_columns(target: str) -> tuple[str, ...]:
 
 
 def _sample_row(sql: str) -> sqlite3.Row:
-    with sqlite3.connect("src/ehitk/data/ehitk.sqlite") as connection:
+    with sqlite3.connect(ROOT_DB_PATH) as connection:
         connection.row_factory = sqlite3.Row
         row = connection.execute(sql).fetchone()
     if row is None:
@@ -41,7 +40,7 @@ def _sample_row(sql: str) -> sqlite3.Row:
 
 
 def _sample_rows(sql: str) -> list[sqlite3.Row]:
-    with sqlite3.connect("src/ehitk/data/ehitk.sqlite") as connection:
+    with sqlite3.connect(ROOT_DB_PATH) as connection:
         connection.row_factory = sqlite3.Row
         rows = connection.execute(sql).fetchall()
     if not rows:
@@ -112,6 +111,8 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
     result = runner.invoke(app, ["--help"])
     output = _strip_ansi(result.output)
     assert result.exit_code == 0
+    assert "Earth Hologenome Initiative ToolKit" in output
+    assert "Query, summarize, and fetch specimens, hologenomes, and MAGs" in output
     assert "--db" in output
     assert "--version" in output
     assert "--catalog" not in output
@@ -122,6 +123,15 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
     hologenomes_index = output.index("hologenomes")
     mags_index = output.index("mags")
     assert specimens_index < hologenomes_index < mags_index
+
+
+def test_root_error_usage_shows_same_header() -> None:
+    result = runner.invoke(app, ["--bad-option"])
+    output = _strip_ansi(result.output)
+    assert result.exit_code != 0
+    assert "Earth Hologenome Initiative ToolKit" in output
+    assert "Query, summarize, and fetch specimens, hologenomes, and MAGs" in output
+    assert "Usage:" in output
 
 
 def test_root_version_option() -> None:
@@ -622,7 +632,7 @@ def test_hologenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
         LIMIT 1
         """
     )
-    db_path = Path("data/ehitk.sqlite").resolve()
+    db_path = ROOT_DB_PATH.resolve()
     batch_path = tmp_path / "hologenomes-fetch.sh"
     manifest_path = tmp_path / "manifest.jsonl"
     result = runner.invoke(

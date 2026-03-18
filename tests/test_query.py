@@ -3,7 +3,9 @@ from pathlib import Path
 import sqlite3
 
 from ehitk.query import (
+    PACKAGE_CATALOG_PATH,
     QueryValidationError,
+    REPO_CATALOG_PATH,
     build_filtered_source_query,
     build_query,
     default_catalog_path,
@@ -43,6 +45,12 @@ def test_validate_where_clause_rejects_semicolon() -> None:
     except QueryValidationError:
         return
     raise AssertionError("Expected QueryValidationError for unsafe SQL")
+
+
+def test_default_catalog_path_prefers_packaged_database() -> None:
+    assert default_catalog_path() == PACKAGE_CATALOG_PATH
+    if REPO_CATALOG_PATH.exists():
+        assert default_catalog_path() != REPO_CATALOG_PATH
 
 
 def test_build_query_for_hologenomes() -> None:

@@ -53,6 +53,41 @@ ehitk --db /path/to/ehitk.sqlite --help
 ehitk hologenomes query --db /path/to/ehitk.sqlite --limit 5
 ```
 
+By default, EHItk uses the bundled SQLite catalog that ships with the installed package version. This means package updates also update the default catalog unless you explicitly override it with `--db`.
+
+## Releasing
+
+EHItk includes a release preparation script and a tag-triggered PyPI workflow.
+
+Prepare a new release locally:
+
+```bash
+python3 -m pip install ".[release]"
+python3 scripts/release.py 1.0.2
+```
+
+The script:
+
+- uses `src/ehitk/data/ehitk.sqlite` as the canonical packaged database for the release
+- cuts the new version entry from `CHANGELOG.md`
+- updates `pyproject.toml`
+- runs `pytest`
+- builds the package
+- runs `twine check`
+
+Use `--dry-run` to preview the release plan without changing files.
+
+After reviewing the result, commit and push a tag:
+
+```bash
+git commit -am "Release v1.0.2"
+git tag v1.0.2
+git push origin main
+git push origin v1.0.2
+```
+
+If PyPI Trusted Publishing is configured for this repository, the `.github/workflows/release.yml` workflow will publish the tagged release automatically.
+
 ## Command Structure
 
 ```text
@@ -174,7 +209,7 @@ ehitk hologenomes query --host-taxid 64176
 ehitk hologenomes query --host-species "Podarcis muralis"
 ehitk hologenomes query --host-lineage Reptilia
 ehitk hologenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
-ehitk hologenomes query --country recIUTmSxiyqoU5lQ --latitude-min 42.7 --latitude-max 42.8
+ehitk hologenomes query --country Italy --latitude-min 42.7 --latitude-max 42.8
 ehitk hologenomes query --weight-min 3.0 --weight-max 6.0 --length-min 55 --length-max 65
 ehitk hologenomes query --hologenome-id EHI00001,EHI00002
 ```
@@ -240,7 +275,7 @@ ehitk mags query --genus Escherichia
 ehitk mags query --species "Escherichia coli"
 ehitk mags query --host-species "Sciurus carolinensis"
 ehitk mags query --hologenome-id EHI00392
-ehitk mags query --country recrACkHppgdXdQse --weight-min 630 --weight-max 690
+ehitk mags query --country Italy --weight-min 630 --weight-max 690
 ehitk mags query --mag-id EHM00001,EHM00002
 ```
 

@@ -7,6 +7,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 import typer
+from typer.core import HAS_RICH, TyperGroup
 
 from ehitk import __version__
 from ehitk.mags.commands import app as mags_app
@@ -14,8 +15,32 @@ from ehitk.hologenomes.commands import app as hologenomes_app
 from ehitk.specimens.commands import app as specimens_app
 from ehitk.query import resolve_catalog_path
 
+ROOT_TITLE = "Earth Hologenome Initiative ToolKit"
+ROOT_DESCRIPTION = "Query, summarize, and fetch specimens, hologenomes, and MAGs from the EHI."
+
+
+class RootHeaderGroup(TyperGroup):
+    def format_help(self, ctx, formatter) -> None:
+        if HAS_RICH and self.rich_markup_mode is not None:
+            from typer import rich_utils
+
+            console = rich_utils._get_rich_console()
+            _print_root_header(console)
+            console.print()
+            return rich_utils.rich_format_help(
+                obj=self,
+                ctx=ctx,
+                markup_mode=self.rich_markup_mode,
+            )
+
+        formatter.write(_render_root_header_text())
+        formatter.write("\n\n")
+        return super().format_help(ctx, formatter)
+
+
 app = typer.Typer(
-    help="Earth Hologenome Initiative Toolkit",
+    cls=RootHeaderGroup,
+    help=ROOT_DESCRIPTION,
     no_args_is_help=False,
     add_completion=False,
 )
@@ -23,6 +48,20 @@ app = typer.Typer(
 app.add_typer(specimens_app, name="specimens")
 app.add_typer(hologenomes_app, name="hologenomes")
 app.add_typer(mags_app, name="mags")
+
+if HAS_RICH:
+    from typer import rich_utils
+
+    _ORIGINAL_RICH_FORMAT_ERROR = rich_utils.rich_format_error
+
+    def _rich_format_error_with_root_header(self) -> None:
+        ctx = getattr(self, "ctx", None)
+        if ctx is not None and isinstance(ctx.find_root().command, RootHeaderGroup):
+            _print_root_header(Console(stderr=True))
+            Console(stderr=True).print()
+        _ORIGINAL_RICH_FORMAT_ERROR(self)
+
+    rich_utils.rich_format_error = _rich_format_error_with_root_header
 
 
 def _version_callback(value: bool) -> None:
@@ -63,15 +102,7 @@ def main(
 
 def _print_root_overview(database_path: Path) -> None:
     console = Console()
-    console.print(
-        Panel.fit(
-            "[bold]Earth Hologenome Initiative ToolKit[/bold]",
-            border_style="cyan",
-        )
-    )
-    console.print(
-        "Query, summarize, and fetch specimens, hologenomes, and MAGs from the EHI."
-    )
+    _print_root_header(console)
     console.print()
 
     summary = _catalog_summary(database_path)
@@ -145,6 +176,17 @@ def _format_gb(value: float | int | None) -> str:
     if value is None:
         return "0.00"
     return f"{value:,.2f}"
+
+
+def _print_root_header(console: Console) -> None:
+    console.print(Panel.fit(f"[bold]{ROOT_TITLE}[/bold]", border_style="cyan"))
+    console.print(ROOT_DESCRIPTION)
+
+
+def _render_root_header_text() -> str:
+    console = Console(record=True, color_system=None, force_terminal=False, width=80)
+    _print_root_header(console)
+    return console.export_text().rstrip()
 
 
 if __name__ == "__main__":

@@ -4,10 +4,41 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ehitk"
-version = "0.8.1"
+version = "1.0.1"
 description = "Earth Hologenome Initiative Toolkit"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+  {name = "Antton Alberdi", email = "antton.alberdi@sund.ku.dk"},
+]
+maintainers = [
+  {name = "Antton Alberdi", email = "antton.alberdi@sund.ku.dk"},
+]
+license = {file = "LICENSE"}
+keywords = [
+  "bioinformatics",
+  "cli",
+  "hologenome",
+  "mag",
+  "metadata",
+  "metagenomics",
+  "microbiome",
+  "sqlite",
+]
+classifiers = [
+  "Environment :: Console",
+  "Intended Audience :: Science/Research",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+  "Topic :: Utilities",
+]
 dependencies = [
   "requests>=2.31.0",
   "rich>=13.7.0",
@@ -18,12 +49,24 @@ dependencies = [
 dev = [
   "pytest>=8.0.0",
 ]
+release = [
+  "build>=1.2.0",
+  "twine>=5.0.0",
+]
 
 [project.scripts]
 ehitk = "ehitk.cli:app"
 
+[project.urls]
+Homepage = "https://github.com/earthhologenome/ehitk"
+Repository = "https://github.com/earthhologenome/ehitk"
+Issues = "https://github.com/earthhologenome/ehitk/issues"
+Documentation = "https://github.com/earthhologenome/ehitk#readme"
+Changelog = "https://github.com/earthhologenome/ehitk/blob/main/CHANGELOG.md"
+
 [tool.setuptools]
 package-dir = {"" = "src"}
+license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
