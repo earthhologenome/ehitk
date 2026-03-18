@@ -10,6 +10,13 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.0.4] - 2026-03-18
+
+### Changed
+
+- Updated the README to document installation from PyPI with `pip install ehitk`.
+- Switched the README logo image to an absolute GitHub URL so it renders correctly outside the repository context.
+- Removed maintainer-only release instructions from the public README.
 ## [1.0.3] - 2026-03-18
 
 ### Fixed
@@ -17,6 +24,7 @@ The format follows Keep a Changelog principles and the project versions follow S
 - Installed test dependencies in the GitHub release workflow so tag-based releases can run `pytest` before building and publishing.
 - Updated the local release preparation guidance to use both development and release extras.
 - Improved the release script error message so missing `pytest` points to the correct dependency install command.
+
 ## [1.0.2] - 2026-03-18
 
 ### Fixed
@@ -27,6 +35,7 @@ The format follows Keep a Changelog principles and the project versions follow S
 ### Changed
 
 - Prepared the project for the next PyPI release after the incomplete 1.0.1 tag.
+
 ## [1.0.1] - 2026-03-18
 
 ### Added

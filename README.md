@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/ehitk_logo.png" alt="EHItk logo" width="500">
+  <img src="https://raw.githubusercontent.com/earthhologenome/ehitk/main/docs/ehitk_logo.png" alt="EHItk logo" width="500">
 </p>
 
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
@@ -28,7 +28,13 @@ It is designed for two common workflows:
 
 EHItk requires Python 3.10 or newer.
 
-Install directly from GitHub:
+Install from PyPI:
+
+```bash
+pip install ehitk
+```
+
+Install the latest development version from GitHub:
 
 ```bash
 pip install git+https://github.com/earthhologenome/ehitk
@@ -54,39 +60,6 @@ ehitk hologenomes query --db /path/to/ehitk.sqlite --limit 5
 ```
 
 By default, EHItk uses the bundled SQLite catalog that ships with the installed package version. This means package updates also update the default catalog unless you explicitly override it with `--db`.
-
-## Releasing
-
-EHItk includes a release preparation script and a tag-triggered PyPI workflow.
-
-Prepare a new release locally:
-
-```bash
-python3 -m pip install ".[dev,release]"
-python3 scripts/release.py 1.0.2
-```
-
-The script:
-
-- uses `src/ehitk/data/ehitk.sqlite` as the canonical packaged database for the release
-- cuts the new version entry from `CHANGELOG.md`
-- updates `pyproject.toml`
-- runs `pytest`
-- builds the package
-- runs `twine check`
-
-Use `--dry-run` to preview the release plan without changing files.
-
-After reviewing the result, commit and push a tag:
-
-```bash
-git commit -am "Release v1.0.2"
-git tag v1.0.2
-git push origin main
-git push origin v1.0.2
-```
-
-If PyPI Trusted Publishing is configured for this repository, the `.github/workflows/release.yml` workflow will publish the tagged release automatically.
 
 ## Command Structure
 
