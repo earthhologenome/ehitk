@@ -101,6 +101,18 @@ def test_query_rows_returns_mags() -> None:
     assert rows[0]["mag_id"].startswith("EHM")
 
 
+def test_query_rows_returns_mag_quality_column() -> None:
+    rows = query_rows(
+        default_catalog_path(),
+        "mags",
+        filters={"genus": "Escherichia"},
+        limit=2,
+        columns="mag_id,quality",
+    )
+    assert rows
+    assert rows[0]["quality"] in {"high", "medium", "low"}
+
+
 def test_query_rows_returns_specimens() -> None:
     rows = query_rows(
         default_catalog_path(),
@@ -146,6 +158,32 @@ def test_query_rows_filters_hologenomes_by_country_and_coordinate_range() -> Non
         },
         limit=5,
         columns="hologenome_id,country,latitude,longitude",
+    )
+
+    assert rows
+    assert any(row["hologenome_id"] == sample["hologenome_id"] for row in rows)
+
+
+def test_query_rows_filters_hologenomes_by_data_range() -> None:
+    sample = _sample_row(
+        """
+        SELECT hologenome_id, data
+        FROM hologenomes_with_specimen
+        WHERE data IS NOT NULL
+        LIMIT 1
+        """
+    )
+    data_value = float(sample["data"])
+
+    rows = query_rows(
+        default_catalog_path(),
+        "hologenomes",
+        filters={
+            "data_min": data_value - 0.01,
+            "data_max": data_value + 0.01,
+        },
+        limit=5,
+        columns="hologenome_id,data",
     )
 
     assert rows
@@ -230,6 +268,8 @@ def test_headers_for_columns_default_and_all() -> None:
     assert headers_for("hologenomes") == headers_for("hologenomes", columns="default")
     assert "data" in headers_for("hologenomes", columns="all")
     assert "data" in headers_for("mags", columns="all")
+    assert "quality" in headers_for("mags")
+    assert "quality" in headers_for("mags", columns="all")
     assert "host_class" in headers_for("hologenomes", columns="all")
     assert headers_for("hologenomes", columns="url") == (
         "hologenome_id",
@@ -299,6 +339,19 @@ def test_build_filtered_source_query_supports_range_and_country_filters() -> Non
     assert "json_each(weight)" in sql
     assert "json_each(length)" in sql
     assert params == ["ExampleLand", 10.5, 20.5, -5.0, 5.0, 1.0, 9.0, 2.0, 8.0]
+
+
+def test_build_filtered_source_query_supports_hologenome_data_range() -> None:
+    sql, params = build_filtered_source_query(
+        "hologenomes",
+        filters={
+            "data_min": 1.25,
+            "data_max": 9.75,
+        },
+    )
+    assert "data >= ?" in sql
+    assert "data <= ?" in sql
+    assert params == [1.25, 9.75]
 
 
 def test_build_filtered_source_query_supports_multi_value_quality_and_ids() -> None:

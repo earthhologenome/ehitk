@@ -18,6 +18,7 @@
     "default": [
       "mag_id",
       "host_species",
+      "quality",
       "completeness",
       "contamination",
       "mag_genus",

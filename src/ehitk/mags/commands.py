@@ -17,6 +17,7 @@ from ehitk.query import (
     query_rows,
 )
 from ehitk.stats import render_target_stats
+from ehitk.terms import ensure_terms_accepted
 from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 
 app = typer.Typer(help="Query, summarize, and fetch metagenome-assembled genomes.", no_args_is_help=True)
@@ -295,6 +296,11 @@ def fetch(
         Path("manifest.jsonl"),
         help="Path to the append-only download manifest.",
     ),
+    accept_terms: bool = typer.Option(
+        False,
+        "--accept-terms",
+        help="Skip the data usage terms prompt for this fetch operation.",
+    ),
     overwrite: bool = typer.Option(
         False,
         "--overwrite",
@@ -380,6 +386,8 @@ def fetch(
     console.print(f"Matched {len(rows)} MAGs; queued {len(jobs)} files for download.")
     if missing_url_count:
         console.print(f"{missing_url_count} MAGs were skipped because URLs were missing.")
+
+    ensure_terms_accepted(console, accept_terms=accept_terms)
 
     if batch is not None:
         script_path = write_batch_script(batch, jobs, overwrite=overwrite)

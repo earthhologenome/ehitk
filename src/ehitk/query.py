@@ -87,6 +87,14 @@ def _taxonomy_select(column: str, prefix: str, alias: str) -> str:
     )
 
 
+MAG_QUALITY_CASE_EXPR = (
+    "CASE "
+    "WHEN completeness >= 90 AND contamination <= 5 THEN 'high' "
+    "WHEN completeness >= 50 AND contamination <= 10 THEN 'medium' "
+    "ELSE 'low' END"
+)
+
+
 TARGETS: dict[str, TargetConfig] = {
     "hologenomes": TargetConfig(
         source="hologenomes_with_specimen",
@@ -172,6 +180,7 @@ TARGETS: dict[str, TargetConfig] = {
         query_columns={
             "mag_id": "mag_id",
             "release": "release",
+            "quality": f"{MAG_QUALITY_CASE_EXPR} AS quality",
             "completeness": "completeness",
             "contamination": "contamination",
             "size": "size",
@@ -211,6 +220,7 @@ TARGETS: dict[str, TargetConfig] = {
         all_query_headers=(
             "mag_id",
             "release",
+            "quality",
             "completeness",
             "contamination",
             "size",
@@ -487,12 +497,7 @@ def _mag_quality_clause(quality: str) -> str:
 
 
 def _mag_quality_value_expr() -> str:
-    return (
-        "CASE "
-        "WHEN completeness >= 90 AND contamination <= 5 THEN 'high' "
-        "WHEN completeness >= 50 AND contamination <= 10 THEN 'medium' "
-        "ELSE 'low' END"
-    )
+    return MAG_QUALITY_CASE_EXPR
 
 
 def available_value_fields(target: str) -> tuple[str, ...]:
@@ -648,6 +653,7 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_exact("biome", filters.get("biome"))
         add_exact("release", filters.get("release"))
         add_exact("country", filters.get("country"))
+        add_numeric_range("data", filters.get("data_min"), filters.get("data_max"))
         add_numeric_range("latitude", filters.get("latitude_min"), filters.get("latitude_max"))
         add_numeric_range("longitude", filters.get("longitude_min"), filters.get("longitude_max"))
         add_json_numeric_range("weight", filters.get("weight_min"), filters.get("weight_max"))

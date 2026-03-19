@@ -161,6 +161,8 @@ Supported hologenome filters:
 - `--sample-type`
 - `--biome`
 - `--country`
+- `--data-min`
+- `--data-max`
 - `--latitude-min`
 - `--latitude-max`
 - `--longitude-min`
@@ -182,6 +184,7 @@ ehitk hologenomes query --host-taxid 64176
 ehitk hologenomes query --host-species "Podarcis muralis"
 ehitk hologenomes query --host-lineage Reptilia
 ehitk hologenomes query --sample-type Faecal --biome "1000221 - Temperate woodland"
+ehitk hologenomes query --data-min 5 --data-max 25
 ehitk hologenomes query --country Italy --latitude-min 42.7 --latitude-max 42.8
 ehitk hologenomes query --weight-min 3.0 --weight-max 6.0 --length-min 55 --length-max 65
 ehitk hologenomes query --hologenome-id EHI00001,EHI00002
@@ -347,6 +350,8 @@ Column presets are configured in `src/ehitk/data/custom_columns.json`.
 
 The default hologenome preset includes the `data` column so dataset size is visible without requesting extra columns.
 
+The default MAG preset includes the derived `quality` column, and `--columns all` includes `quality` as well.
+
 The `url` preset is only available for:
 
 - `hologenomes`
@@ -415,6 +420,7 @@ Both `fetch` commands support:
 - `--output-dir PATH`
 - `--batch PATH`
 - `--manifest-path PATH`
+- `--accept-terms`
 - `--overwrite`
 - `--limit`
 
@@ -427,6 +433,8 @@ ehitk mags fetch --quality high --limit 10 --batch mags-downloads.sh
 ```
 
 When `--batch` is used, EHItk writes an executable shell script with `curl` commands and does not download files or append manifest entries at generation time.
+
+Before any fetch operation, EHItk displays the EHI data usage terms and asks for confirmation. Use `--accept-terms` to suppress the prompt once you have read and accepted the terms.
 
 ## Download Manifest
 

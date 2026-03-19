@@ -10,6 +10,13 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.0.5] - 2026-03-19
+
+### Changed
+
+- Added `--data-min` and `--data-max` hologenome filters for constraining available dataset size in GB.
+- Added the derived MAG `quality` column to default query output and to `--columns all`.
+- Added a fetch-time data usage terms prompt for hologenome and MAG downloads, with `--accept-terms` to suppress it after acceptance.
 ## [1.0.4] - 2026-03-18
 
 ### Changed
@@ -17,6 +24,7 @@ The format follows Keep a Changelog principles and the project versions follow S
 - Updated the README to document installation from PyPI with `pip install ehitk`.
 - Switched the README logo image to an absolute GitHub URL so it renders correctly outside the repository context.
 - Removed maintainer-only release instructions from the public README.
+
 ## [1.0.3] - 2026-03-18
 
 ### Fixed

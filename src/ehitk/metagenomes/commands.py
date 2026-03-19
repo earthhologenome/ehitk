@@ -17,6 +17,7 @@ from ehitk.query import (
     query_rows,
 )
 from ehitk.stats import render_target_stats
+from ehitk.terms import ensure_terms_accepted
 from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 
 app = typer.Typer(help="Query, summarize, and fetch hologenomes.", no_args_is_help=True)
@@ -44,6 +45,8 @@ def query(
     biome: str | None = typer.Option(None, help="Exact biome label."),
     country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    data_min: float | None = typer.Option(None, help="Minimum available data in GB."),
+    data_max: float | None = typer.Option(None, help="Maximum available data in GB."),
     latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
     latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
     longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
@@ -89,6 +92,8 @@ def query(
         "biome": biome,
         "country": country,
         "release": release,
+        "data_min": data_min,
+        "data_max": data_max,
         "latitude_min": latitude_min,
         "latitude_max": latitude_max,
         "longitude_min": longitude_min,
@@ -150,6 +155,8 @@ def values(
     biome: str | None = typer.Option(None, help="Exact biome label."),
     country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    data_min: float | None = typer.Option(None, help="Minimum available data in GB."),
+    data_max: float | None = typer.Option(None, help="Maximum available data in GB."),
     latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
     latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
     longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
@@ -190,6 +197,8 @@ def values(
         "biome": biome,
         "country": country,
         "release": release,
+        "data_min": data_min,
+        "data_max": data_max,
         "latitude_min": latitude_min,
         "latitude_max": latitude_max,
         "longitude_min": longitude_min,
@@ -248,6 +257,8 @@ def fetch(
     biome: str | None = typer.Option(None, help="Exact biome label."),
     country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    data_min: float | None = typer.Option(None, help="Minimum available data in GB."),
+    data_max: float | None = typer.Option(None, help="Maximum available data in GB."),
     latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
     latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
     longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
@@ -278,6 +289,11 @@ def fetch(
         Path("manifest.jsonl"),
         help="Path to the append-only download manifest.",
     ),
+    accept_terms: bool = typer.Option(
+        False,
+        "--accept-terms",
+        help="Skip the data usage terms prompt for this fetch operation.",
+    ),
     overwrite: bool = typer.Option(
         False,
         "--overwrite",
@@ -294,6 +310,8 @@ def fetch(
         "biome": biome,
         "country": country,
         "release": release,
+        "data_min": data_min,
+        "data_max": data_max,
         "latitude_min": latitude_min,
         "latitude_max": latitude_max,
         "longitude_min": longitude_min,
@@ -379,6 +397,8 @@ def fetch(
     if missing_url_count:
         console.print(f"{missing_url_count} hologenomes were skipped because URLs were missing.")
 
+    ensure_terms_accepted(console, accept_terms=accept_terms)
+
     if batch is not None:
         script_path = write_batch_script(batch, jobs, overwrite=overwrite)
         console.print(f"Wrote batch download script with {len(jobs)} files to {script_path}.")
@@ -415,6 +435,8 @@ def stats(
     biome: str | None = typer.Option(None, help="Exact biome label."),
     country: str | None = typer.Option(None, help="Exact country label."),
     release: str | None = typer.Option(None, help="Exact release ID."),
+    data_min: float | None = typer.Option(None, help="Minimum available data in GB."),
+    data_max: float | None = typer.Option(None, help="Maximum available data in GB."),
     latitude_min: float | None = typer.Option(None, help="Minimum latitude."),
     latitude_max: float | None = typer.Option(None, help="Maximum latitude."),
     longitude_min: float | None = typer.Option(None, help="Minimum longitude."),
@@ -438,6 +460,8 @@ def stats(
         "biome": biome,
         "country": country,
         "release": release,
+        "data_min": data_min,
+        "data_max": data_max,
         "latitude_min": latitude_min,
         "latitude_max": latitude_max,
         "longitude_min": longitude_min,

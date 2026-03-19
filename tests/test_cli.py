@@ -206,6 +206,35 @@ def test_hologenomes_query_cli_supports_country_and_coordinate_ranges() -> None:
     assert sample["hologenome_id"] in result.stdout
 
 
+def test_hologenomes_query_cli_supports_data_range() -> None:
+    sample = _sample_row(
+        """
+        SELECT hologenome_id, data
+        FROM hologenomes_with_specimen
+        WHERE data IS NOT NULL
+        LIMIT 1
+        """
+    )
+    data_value = float(sample["data"])
+    result = runner.invoke(
+        app,
+        [
+            "hologenomes",
+            "query",
+            "--data-min",
+            str(data_value - 0.01),
+            "--data-max",
+            str(data_value + 0.01),
+            "--limit",
+            "1",
+            "--columns",
+            "hologenome_id,data",
+        ],
+    )
+    assert result.exit_code == 0
+    assert sample["hologenome_id"] in result.stdout
+
+
 def test_specimens_query_cli_supports_weight_and_length_ranges() -> None:
     sample = _sample_row(
         """
@@ -521,6 +550,49 @@ def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:
     assert contents.splitlines()[0] == "mag_id,host_species,mag_genus"
 
 
+def test_mags_query_cli_default_columns_include_quality(tmp_path) -> None:
+    output_path = tmp_path / "mags-default.csv"
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--host-species",
+            "Sciurus carolinensis",
+            "--limit",
+            "1",
+            "--csv",
+            str(output_path),
+        ],
+    )
+    assert result.exit_code == 0
+    contents = output_path.read_text(encoding="utf-8")
+    assert contents.splitlines()[0] == ",".join(_default_columns("mags"))
+    assert "quality" in contents.splitlines()[0].split(",")
+
+
+def test_mags_query_cli_all_columns_include_quality(tmp_path) -> None:
+    output_path = tmp_path / "mags-all.csv"
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--host-species",
+            "Sciurus carolinensis",
+            "--limit",
+            "1",
+            "--columns",
+            "all",
+            "--csv",
+            str(output_path),
+        ],
+    )
+    assert result.exit_code == 0
+    contents = output_path.read_text(encoding="utf-8")
+    assert "quality" in contents.splitlines()[0].split(",")
+
+
 def test_query_cli_writes_url_preset_for_hologenomes(tmp_path) -> None:
     output_path = tmp_path / "hologenomes-url.csv"
     result = runner.invoke(
@@ -646,6 +718,7 @@ def test_hologenomes_fetch_cli_writes_batch_script(tmp_path) -> None:
             str(batch_path),
             "--manifest-path",
             str(manifest_path),
+            "--accept-terms",
             "--db",
             str(db_path),
         ],
@@ -682,6 +755,7 @@ def test_mags_fetch_cli_writes_batch_script(tmp_path) -> None:
             str(batch_path),
             "--manifest-path",
             str(manifest_path),
+            "--accept-terms",
         ],
     )
     assert result.exit_code == 0
@@ -716,6 +790,7 @@ def test_hologenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -
             str(batch_path),
             "--manifest-path",
             str(manifest_path),
+            "--accept-terms",
         ],
     )
     assert result.exit_code == 0
@@ -725,6 +800,59 @@ def test_hologenomes_fetch_batch_skips_missing_urls_without_manifest(tmp_path) -
     assert "missing paired read URLs" in result.output
     assert "Wrote batch download script with 0 files" in result.output
     assert not manifest_path.exists()
+
+
+def test_hologenomes_fetch_prompts_for_terms_and_accepts_with_input(tmp_path) -> None:
+    sample = _sample_row(
+        """
+        SELECT hologenome_id
+        FROM hologenomes_with_specimen
+        WHERE url1 IS NOT NULL AND url1 <> '' AND url2 IS NOT NULL AND url2 <> ''
+        LIMIT 1
+        """
+    )
+    batch_path = tmp_path / "terms-accepted.sh"
+    result = runner.invoke(
+        app,
+        [
+            "hologenomes",
+            "fetch",
+            "--hologenome-id",
+            sample["hologenome_id"],
+            "--batch",
+            str(batch_path),
+        ],
+        input="y\n",
+    )
+    assert result.exit_code == 0
+    assert batch_path.exists()
+
+
+def test_mags_fetch_exits_when_terms_are_not_accepted(tmp_path) -> None:
+    sample = _sample_row(
+        """
+        SELECT mag_id
+        FROM mags
+        WHERE url IS NOT NULL AND url <> ''
+        LIMIT 1
+        """
+    )
+    batch_path = tmp_path / "terms-declined.sh"
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "fetch",
+            "--mag-id",
+            sample["mag_id"],
+            "--batch",
+            str(batch_path),
+        ],
+        input="n\n",
+    )
+    assert result.exit_code == 1
+    assert "Data Usage Terms" in result.output
+    assert not batch_path.exists()
 
 
 def test_hologenomes_stats_cli() -> None:
