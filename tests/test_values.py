@@ -18,10 +18,22 @@ def test_value_rows_returns_hologenome_data_counts() -> None:
     field, rows = value_rows(
         str(default_catalog_path()),
         target="hologenomes",
+        field="data_gb",
+        limit=5,
+    )
+    assert field == "data_gb"
+    assert rows
+    assert rows[0]["count"] >= 1
+
+
+def test_value_rows_accepts_legacy_hologenome_data_alias() -> None:
+    field, rows = value_rows(
+        str(default_catalog_path()),
+        target="hologenomes",
         field="data",
         limit=5,
     )
-    assert field == "data"
+    assert field == "data_gb"
     assert rows
     assert rows[0]["count"] >= 1
 

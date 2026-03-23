@@ -228,7 +228,7 @@ def test_hologenomes_query_cli_supports_data_range() -> None:
             "--limit",
             "1",
             "--columns",
-            "hologenome_id,data",
+            "hologenome_id,data_gb",
         ],
     )
     assert result.exit_code == 0

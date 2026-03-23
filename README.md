@@ -7,22 +7,23 @@
 
 The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for finding, summarising and downloading data from EHI specimens, hologenomes and MAGs.
 
-It is designed for two common workflows:
+It supports three common tasks:
 
 - find datasets by metadata
+- summarise matching records and available data volume
 - download matching shotgun sequencing datasets and MAG FASTA files
 
 ## Features
 
-- Query hologenomes by host metadata, sample type, biome, and release
-- Query hologenomes by host metadata, geography, specimen measurements, sample type, biome, and release
-- Query MAGs by taxonomy, parent hologenome, release, derived quality class, host taxonomy, geography, and specimen measurements
-- Query specimens directly, including specimen measurement ranges
-- Quantify available hologenome data volume (GB) in overview and stats outputs
-- Use friendly filters or an advanced `--where` SQL predicate
-- Download paired hologenome reads and MAG FASTA files
-- Show Rich progress bars with filename, progress, speed, and size
-- Append every fetch outcome to `manifest.jsonl`
+- Explore `specimens`, `hologenomes`, and `mags` through a consistent CLI
+- Filter hologenomes by host taxonomy, geography, biome, sample type, and available data volume
+- Filter MAGs by microbial taxonomy, derived quality class, parent hologenome metadata, and linked specimen metadata
+- Inspect distinct field values with `values` and summarise filtered subsets with `stats`
+- Export query results to CSV or TSV
+- Download paired hologenome reads and MAG FASTA files, or emit batch download scripts
+- Track fetch outcomes in `manifest.jsonl`
+- Use the bundled SQLite catalog by default, or point to an alternate database with `--db`
+- Add advanced SQL predicates with `--where` when needed
 
 ## Installation
 
@@ -34,7 +35,7 @@ Install from PyPI:
 pip install ehitk
 ```
 
-Install the latest development version from GitHub:
+Install from GitHub if you need the latest unreleased version:
 
 ```bash
 pip install git+https://github.com/earthhologenome/ehitk
@@ -61,29 +62,24 @@ ehitk hologenomes query --db /path/to/ehitk.sqlite --limit 5
 
 By default, EHItk uses the bundled SQLite catalog that ships with the installed package version. This means package updates also update the default catalog unless you explicitly override it with `--db`.
 
-## Command Structure
+## Command Overview
 
-```text
-[ehitk]
-├─ * specimens *
-│  ├─ query
-│  ├─ values
-│  └─ stats
-├─ * hologenomes *
-│  ├─ query
-│  ├─ values
-│  ├─ stats
-│  └─ fetch
-└─ * mags *
-   ├─ query
-   ├─ values
-   ├─ stats
-   └─ fetch
-```
+EHItk is organised around three resource types:
+
+- `specimens`: inspect host and specimen metadata
+- `hologenomes`: query and download shotgun sequencing datasets
+- `mags`: query and download metagenome-assembled genomes
+
+Each resource type supports a consistent action model:
+
+- `query`: return matching records
+- `values`: list distinct values and counts for a chosen field
+- `stats`: summarise a filtered subset
+- `fetch`: download matching files, available for `hologenomes` and `mags`
 
 ## Quick Start
 
-Query specimens:
+Inspect specimen metadata:
 
 ```bash
 ehitk specimens query --host-species "Podarcis muralis" --limit 5
@@ -101,11 +97,11 @@ Query hologenomes:
 ehitk hologenomes query --host-species "Podarcis muralis" --limit 5
 ```
 
-Explore hologenome values:
+Inspect available hologenome values:
 
 ```bash
 ehitk hologenomes values --field country --limit 10
-ehitk hologenomes values --field data --limit 10
+ehitk hologenomes values --field data_gb --limit 10
 ```
 
 Query MAGs:
@@ -114,13 +110,13 @@ Query MAGs:
 ehitk mags query --genus Escherichia --limit 5
 ```
 
-Explore MAG values:
+Inspect available MAG values:
 
 ```bash
 ehitk mags values --field genus --limit 10
 ```
 
-Summarize MAGs:
+Summarise MAGs:
 
 ```bash
 ehitk mags stats --quality high --species "Escherichia coli"
@@ -132,7 +128,7 @@ Fetch one hologenome:
 ehitk hologenomes fetch --host-lineage Reptilia --limit 1
 ```
 
-Write a hologenome batch download script instead of downloading immediately:
+Generate a hologenome batch download script instead of downloading immediately:
 
 ```bash
 ehitk hologenomes fetch --host-lineage Reptilia --limit 1 --batch hologenomes.sh
@@ -144,11 +140,54 @@ Fetch one MAG:
 ehitk mags fetch --species "Escherichia coli" --limit 1
 ```
 
-Write a MAG batch download script instead of downloading immediately:
+Generate a MAG batch download script instead of downloading immediately:
 
 ```bash
 ehitk mags fetch --species "Escherichia coli" --limit 1 --batch mags.sh
 ```
+
+## Querying Specimens
+
+Supported specimen filters:
+
+- `--specimen-id`
+- `--host-taxid`
+- `--host-species`
+- `--host-lineage`
+- `--sex`
+- `--weight-min`
+- `--weight-max`
+- `--length-min`
+- `--length-max`
+- `--columns`
+- `--where`
+- `--limit`
+
+Examples:
+
+```bash
+ehitk specimens query --specimen-id SD00508
+ehitk specimens query --host-species "Podarcis muralis"
+ehitk specimens query --host-lineage Mammalia --sex Female
+ehitk specimens query --weight-min 8 --weight-max 9 --length-min 40 --length-max 41
+```
+
+For `weight` and `length`, the catalog may store multiple recorded values per specimen. Range filters match when any recorded value falls within the requested interval.
+
+Specimen summary statistics:
+
+```bash
+ehitk specimens stats --host-lineage Reptilia
+```
+
+Specimen value summaries:
+
+```bash
+ehitk specimens values --field host_order
+ehitk specimens values --field sex --csv specimen-sex-values.csv
+```
+
+`values` prints distinct values with counts for a chosen field after applying any other filters. For MAGs, `--field genus`, `--field species`, and `--field quality` are supported aliases.
 
 ## Querying Hologenomes
 
@@ -257,6 +296,8 @@ ehitk mags query --mag-id EHM00001,EHM00002
 
 MAG taxonomy values in the catalog may use GTDB-style prefixes such as `g__` and `s__`. EHItk normalizes those during filtering and display, so `--genus Escherichia` matches `g__Escherichia`.
 
+Because MAGs are linked to parent hologenomes and specimens in the catalog, MAG queries can also use host taxonomy, geography, and specimen measurement filters.
+
 Derived MAG quality classes are defined as:
 
 - `high`: `completeness >= 90` and `contamination <= 5`
@@ -276,49 +317,6 @@ MAG value summaries:
 ehitk mags values --field genus
 ehitk mags values --field quality
 ```
-
-## Querying Specimens
-
-Supported specimen filters:
-
-- `--specimen-id`
-- `--host-taxid`
-- `--host-species`
-- `--host-lineage`
-- `--sex`
-- `--weight-min`
-- `--weight-max`
-- `--length-min`
-- `--length-max`
-- `--columns`
-- `--where`
-- `--limit`
-
-Examples:
-
-```bash
-ehitk specimens query --specimen-id SD00508
-ehitk specimens query --host-species "Podarcis muralis"
-ehitk specimens query --host-lineage Mammalia --sex Female
-ehitk specimens query --weight-min 8 --weight-max 9 --length-min 40 --length-max 41
-```
-
-For `weight` and `length`, the catalog may store multiple recorded values per specimen. Range filters match when any recorded value falls within the requested interval.
-
-Specimen summary statistics:
-
-```bash
-ehitk specimens stats --host-lineage Reptilia
-```
-
-Specimen value summaries:
-
-```bash
-ehitk specimens values --field host_order
-ehitk specimens values --field sex --csv specimen-sex-values.csv
-```
-
-`values` prints distinct values with counts for a chosen field after applying any other filters. For MAGs, `--field genus`, `--field species`, and `--field quality` are supported aliases.
 
 ## Controlling Query Columns
 
@@ -346,11 +344,11 @@ ehitk mags query --columns url --tsv mag_urls.tsv
 ehitk mags query --columns mag_id,host_species,mag_genus --limit 5
 ```
 
-Column presets are configured in `src/ehitk/data/custom_columns.json`.
+Default columns are chosen to give a compact, user-friendly view for each resource.
 
-The default hologenome preset includes the `data` column so dataset size is visible without requesting extra columns.
+The default hologenome view includes the `data_gb` column so dataset size is visible without requesting extra columns.
 
-The default MAG preset includes the derived `quality` column, and `--columns all` includes `quality` as well.
+The default MAG view includes the derived `quality` column, and `--columns all` includes `quality` as well.
 
 The `url` preset is only available for:
 
@@ -394,6 +392,8 @@ For safety, EHItk rejects predicates containing:
 - records with missing read URLs are skipped
 - files are written under `downloads/hologenomes/<hologenome_id>/`
 
+On first use, EHItk asks you to confirm the EHI data usage terms before continuing.
+
 Example:
 
 ```bash
@@ -434,7 +434,7 @@ ehitk mags fetch --quality high --limit 10 --batch mags-downloads.sh
 
 When `--batch` is used, EHItk writes an executable shell script with `curl` commands and does not download files or append manifest entries at generation time.
 
-Before any fetch operation, EHItk displays the EHI data usage terms and asks for confirmation. Use `--accept-terms` to suppress the prompt once you have read and accepted the terms.
+Before any fetch operation, EHItk displays the EHI data usage terms and asks for confirmation. After you have read and accepted them, use `--accept-terms` to suppress the prompt in future commands.
 
 ## Download Manifest
 

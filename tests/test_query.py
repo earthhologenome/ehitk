@@ -83,10 +83,10 @@ def test_query_rows_returns_hologenome_data_column() -> None:
         "hologenomes",
         filters={"host_species": "Podarcis muralis"},
         limit=2,
-        columns="hologenome_id,data",
+        columns="hologenome_id,data_gb",
     )
     assert rows
-    assert "data" in rows[0].keys()
+    assert "data_gb" in rows[0].keys()
 
 
 def test_query_rows_returns_mags() -> None:
@@ -183,7 +183,7 @@ def test_query_rows_filters_hologenomes_by_data_range() -> None:
             "data_max": data_value + 0.01,
         },
         limit=5,
-        columns="hologenome_id,data",
+        columns="hologenome_id,data_gb",
     )
 
     assert rows
@@ -266,8 +266,8 @@ def test_query_rows_supports_comma_separated_mag_ids() -> None:
 def test_headers_for_columns_default_and_all() -> None:
     assert headers_for("hologenomes") == _default_columns("hologenomes")
     assert headers_for("hologenomes") == headers_for("hologenomes", columns="default")
-    assert "data" in headers_for("hologenomes", columns="all")
-    assert "data" in headers_for("mags", columns="all")
+    assert "data_gb" in headers_for("hologenomes", columns="all")
+    assert "data_gb" in headers_for("mags", columns="all")
     assert "quality" in headers_for("mags")
     assert "quality" in headers_for("mags", columns="all")
     assert "host_class" in headers_for("hologenomes", columns="all")
@@ -277,6 +277,11 @@ def test_headers_for_columns_default_and_all() -> None:
         "url2",
     )
     assert headers_for("mags", columns="url") == ("mag_id", "url")
+
+
+def test_headers_for_accepts_legacy_data_alias() -> None:
+    assert headers_for("hologenomes", columns="data") == ("data_gb",)
+    assert headers_for("mags", columns="data") == ("data_gb",)
 
 
 def test_build_query_with_explicit_columns() -> None:

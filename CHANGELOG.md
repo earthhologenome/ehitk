@@ -10,6 +10,13 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.0.6] - 2026-03-23
+
+### Changed
+
+- Improved the README so it reads as end-user documentation, with clearer command descriptions, examples, and fetch behavior notes.
+- Standardized the user-facing data-size column name to `data_gb` in query and values output, while keeping `data` as a compatibility alias.
+
 ## [1.0.5] - 2026-03-19
 
 ### Changed
@@ -17,6 +24,8 @@ The format follows Keep a Changelog principles and the project versions follow S
 - Added `--data-min` and `--data-max` hologenome filters for constraining available dataset size in GB.
 - Added the derived MAG `quality` column to default query output and to `--columns all`.
 - Added a fetch-time data usage terms prompt for hologenome and MAG downloads, with `--accept-terms` to suppress it after acceptance.
+- Standardized the user-facing hologenome and MAG data-size column name to `data_gb`.
+
 ## [1.0.4] - 2026-03-18
 
 ### Changed

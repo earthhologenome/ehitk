@@ -109,7 +109,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url1": "url1",
             "url2": "url2",
             "biome": "biome",
-            "data": "data",
+            "data_gb": "data AS data_gb",
             "specimen_id": "specimen_id",
             "host_taxid": "host_taxid",
             "host_species": "host_species",
@@ -132,7 +132,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url1",
             "url2",
             "biome",
-            "data",
+            "data_gb",
             "specimen_id",
             "host_taxid",
             "host_species",
@@ -205,7 +205,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url1": "url1",
             "url2": "url2",
             "biome": "biome",
-            "data": "data",
+            "data_gb": "data AS data_gb",
             "specimen_id": "specimen_id",
             "host_taxid": "host_taxid",
             "host_species": "host_species",
@@ -245,7 +245,7 @@ TARGETS: dict[str, TargetConfig] = {
             "url1",
             "url2",
             "biome",
-            "data",
+            "data_gb",
             "specimen_id",
             "host_taxid",
             "host_species",
@@ -348,8 +348,11 @@ TARGETS: dict[str, TargetConfig] = {
 }
 
 VALUE_FIELD_ALIASES: dict[str, dict[str, str]] = {
-    "hologenomes": {},
+    "hologenomes": {
+        "data": "data_gb",
+    },
     "mags": {
+        "data": "data_gb",
         "genus": "mag_genus",
         "species": "mag_species",
         "quality": "quality",
@@ -358,6 +361,14 @@ VALUE_FIELD_ALIASES: dict[str, dict[str, str]] = {
 }
 
 JSON_ARRAY_VALUE_FIELDS = {"weight", "length"}
+QUERY_COLUMN_ALIASES: dict[str, dict[str, str]] = {
+    "hologenomes": {
+        "data": "data_gb",
+    },
+    "mags": {
+        "data": "data_gb",
+    },
+}
 
 
 def default_catalog_path() -> Path:
@@ -439,7 +450,9 @@ def resolve_query_headers(target: str, columns: str | None = None) -> tuple[str,
             )
 
     requested_headers = tuple(
-        column.strip() for column in columns.split(",") if column.strip()
+        QUERY_COLUMN_ALIASES.get(target, {}).get(column.strip(), column.strip())
+        for column in columns.split(",")
+        if column.strip()
     )
 
     invalid_columns = [
@@ -539,6 +552,8 @@ def value_expression_for(target: str, field: str) -> tuple[str, bool]:
         return _normalized_taxonomy_expr("mag_species", "s__"), False
     if canonical == "quality":
         return _mag_quality_value_expr(), False
+    if canonical == "data_gb":
+        return "data", False
     return canonical, canonical in JSON_ARRAY_VALUE_FIELDS
 
 
