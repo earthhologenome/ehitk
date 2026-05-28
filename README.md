@@ -23,6 +23,7 @@ pip install ehitk
 ```bash
 ehitk specimens query --host-species "Podarcis muralis" --limit 5
 ehitk hologenomes query --biome ENVO:01000175 --limit 5
+ehitk hologenomes fields
 ehitk hologenomes values --field country --limit 10
 ehitk mags stats --quality high --species "Escherichia coli"
 ehitk mags query --quality high --csv | head

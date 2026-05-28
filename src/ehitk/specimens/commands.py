@@ -5,6 +5,7 @@ from pathlib import Path
 from rich.console import Console
 import typer
 
+from ehitk.fields import value_field_rows
 from ehitk.output import render_or_export_rows, validate_export_options
 from ehitk.query import (
     DEFAULT_QUERY_LIMIT,
@@ -17,6 +18,35 @@ from ehitk.stats import render_target_stats
 from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 
 app = typer.Typer(help="Query and summarize specimens.", no_args_is_help=True)
+
+
+@app.command(help="List fields accepted by specimen values --field.")
+def fields(
+    csv: bool = typer.Option(
+        False,
+        "--csv",
+        help="Write fields as CSV to stdout, or to --output-file.",
+    ),
+    tsv: bool = typer.Option(
+        False,
+        "--tsv",
+        help="Write fields as TSV to stdout, or to --output-file.",
+    ),
+    output_file: Path | None = typer.Option(
+        None,
+        "--output-file",
+        help="Write CSV or TSV output to this file instead of stdout.",
+    ),
+) -> None:
+    render_or_export_rows(
+        Console(),
+        ("field", "type", "resolves_to"),
+        value_field_rows("specimens"),
+        title="Specimen value fields",
+        csv_output=csv,
+        tsv_output=tsv,
+        output_file=output_file,
+    )
 
 
 @app.command(help="List specimen records that match host taxonomy, sex, and measurement filters.")

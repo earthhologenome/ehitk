@@ -1,8 +1,9 @@
 Quick start
 ===========
 
-Start with ``query`` when you want rows, ``values`` when you want to discover
-available filter values, and ``stats`` when you want a summary of a subset.
+Start with ``query`` when you want rows, ``fields`` when you want to discover
+valid ``values --field`` names, ``values`` when you want to discover available
+filter values, and ``stats`` when you want a summary of a subset.
 
 Python API
 ----------
@@ -26,6 +27,7 @@ Inspect specimen metadata
 .. code-block:: bash
 
    ehitk specimens query --host-species "Podarcis muralis" --limit 5
+   ehitk specimens fields
    ehitk specimens values --field host_species --limit 10
    ehitk specimens stats --host-lineage Reptilia
 
@@ -36,6 +38,7 @@ Find hologenome datasets
 
    ehitk hologenomes query --host-species "Podarcis muralis" --limit 5
    ehitk hologenomes query --biome ENVO:01000175 --limit 5
+   ehitk hologenomes fields
    ehitk hologenomes values --field country --limit 10
    ehitk hologenomes stats --host-lineage Reptilia
 
@@ -45,6 +48,7 @@ Find MAGs
 .. code-block:: bash
 
    ehitk mags query --genus Escherichia --limit 5
+   ehitk mags fields
    ehitk mags values --field quality
    ehitk mags stats --quality high --species "Escherichia coli"
 
@@ -68,6 +72,7 @@ Use help at any level
 
    ehitk --help
    ehitk specimens --help
+   ehitk hologenomes fields --help
    ehitk specimens query --help
    ehitk hologenomes fetch --help
    ehitk mags values --help

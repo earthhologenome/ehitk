@@ -11,20 +11,24 @@ Resources
 ---------
 
 ``specimens``
-   Host and specimen metadata. This resource supports ``query``, ``values``,
-   and ``stats``.
+   Host and specimen metadata. This resource supports ``fields``, ``query``,
+   ``values``, and ``stats``.
 
 ``hologenomes``
    Shotgun sequencing datasets linked to specimens. This resource supports
-   ``query``, ``values``, ``stats``, and ``fetch``.
+   ``fields``, ``query``, ``values``, ``stats``, and ``fetch``.
 
 ``mags``
    Metagenome-assembled genomes linked to parent hologenomes and host
-   specimens. This resource supports ``query``, ``values``, ``stats``, and
-   ``fetch``.
+   specimens. This resource supports ``fields``, ``query``, ``values``,
+   ``stats``, and ``fetch``.
 
 Actions
 -------
+
+``fields``
+   Lists the field names accepted by ``values --field``, including aliases and
+   the canonical field each alias resolves to.
 
 ``query``
    Prints matching records as a rich table by default, or emits CSV/TSV to

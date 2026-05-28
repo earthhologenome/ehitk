@@ -66,10 +66,18 @@ Default columns
    ``mag_id``, ``host_species``, ``quality``, ``completeness``,
    ``contamination``, ``mag_genus``, ``mag_species``.
 
-Value counts
-------------
+Value fields and counts
+-----------------------
 
-The ``values`` action counts distinct values for any available query field:
+The ``fields`` action lists the names accepted by ``values --field``:
+
+.. code-block:: bash
+
+   ehitk specimens fields
+   ehitk hologenomes fields
+   ehitk mags fields --csv
+
+The ``values`` action counts distinct values for any listed field:
 
 .. code-block:: bash
 

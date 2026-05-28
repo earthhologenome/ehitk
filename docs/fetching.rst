@@ -56,6 +56,126 @@ instead of downloading immediately:
 Batch generation does not append manifest entries because the files are not
 downloaded by EHItk at generation time.
 
+Snakemake example
+-----------------
+
+The following minimal Snakemake template chains EHItk hologenome fetching with
+paired-end quality filtering through ``fastp``. It assumes that ``ehitk``,
+``snakemake``, and ``fastp`` are available in the execution environment.
+
+Example ``config.yaml``:
+
+.. code-block:: yaml
+
+   hologenome_ids:
+     - EHI00001
+
+Example ``Snakefile``:
+
+.. code-block:: python
+
+   from pathlib import Path
+   from urllib.parse import urlparse
+
+   import ehitk
+
+
+   configfile: "config.yaml"
+
+   HOLOGENOME_IDS = config["hologenome_ids"]
+   DOWNLOAD_DIR = Path("downloads")
+
+
+   def filename_from_url(url, fallback):
+       name = Path(urlparse(url).path).name
+       return name or fallback
+
+
+   def read_paths(wildcards):
+       with ehitk.Database() as ehidb:
+           records = ehidb.hologenomes.query(
+               hologenome_id=wildcards.hologenome_id,
+               columns=["hologenome_id", "url1", "url2"],
+               limit=1,
+           )
+
+       if not records:
+           raise ValueError(f"Unknown hologenome_id: {wildcards.hologenome_id}")
+
+       record = records[0]
+       base = DOWNLOAD_DIR / "hologenomes" / record.hologenome_id
+       return {
+           "r1": base / filename_from_url(
+               record.url1, f"{record.hologenome_id}_1.fastq.gz"
+           ),
+           "r2": base / filename_from_url(
+               record.url2, f"{record.hologenome_id}_2.fastq.gz"
+           ),
+       }
+
+
+   def read1(wildcards):
+       return read_paths(wildcards)["r1"]
+
+
+   def read2(wildcards):
+       return read_paths(wildcards)["r2"]
+
+
+   rule all:
+       input:
+           expand(
+               "results/fastp/{hologenome_id}_R1.fastq.gz",
+               hologenome_id=HOLOGENOME_IDS,
+           ),
+           expand(
+               "results/fastp/{hologenome_id}_R2.fastq.gz",
+               hologenome_id=HOLOGENOME_IDS,
+           ),
+
+
+   rule fetch_hologenome:
+       output:
+           directory("downloads/hologenomes/{hologenome_id}")
+       shell:
+           """
+           ehitk hologenomes fetch \
+             --hologenome-id {wildcards.hologenome_id} \
+             --output-dir downloads \
+             --accept-terms
+           """
+
+
+   rule fastp:
+       input:
+           raw_dir=rules.fetch_hologenome.output
+       output:
+           r1="results/fastp/{hologenome_id}_R1.fastq.gz",
+           r2="results/fastp/{hologenome_id}_R2.fastq.gz",
+           html="results/fastp/{hologenome_id}.html",
+           json="results/fastp/{hologenome_id}.json",
+       params:
+           r1=read1,
+           r2=read2,
+       threads: 4
+       shell:
+           """
+           fastp \
+             --in1 {params.r1} \
+             --in2 {params.r2} \
+             --out1 {output.r1} \
+             --out2 {output.r2} \
+             --html {output.html} \
+             --json {output.json} \
+             --thread {threads}
+           """
+
+Run the workflow with:
+
+.. code-block:: bash
+
+   snakemake --cores 4
+
 Fetch options
 -------------
 

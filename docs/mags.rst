@@ -78,6 +78,7 @@ Summarize MAGs
 
    ehitk mags stats --quality high --species "Escherichia coli"
    ehitk mags stats --host-species "Sciurus carolinensis"
+   ehitk mags fields
    ehitk mags values --field genus
    ehitk mags values --field species
    ehitk mags values --field quality

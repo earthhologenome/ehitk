@@ -6,6 +6,19 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 ## [Unreleased]
 
+### Added
+
+- No unreleased changes yet.
+
+## [1.1.2] - 2026-05-28
+
+### Added
+
+- Added `fields` commands for specimens, hologenomes, and MAGs so users can
+  list the names accepted by `values --field`, including aliases.
+- Added a Snakemake documentation example showing how to fetch hologenome reads
+  with EHItk and quality-filter the paired FASTQ files with fastp.
+
 ## [1.1.1] - 2026-05-28
 
 ### Added

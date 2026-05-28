@@ -60,6 +60,7 @@ Summarize hologenomes
 .. code-block:: bash
 
    ehitk hologenomes stats --host-species "Podarcis muralis"
+   ehitk hologenomes fields
    ehitk hologenomes values --field host_species
    ehitk hologenomes values --field biome_name
    ehitk hologenomes values --field country --limit 20

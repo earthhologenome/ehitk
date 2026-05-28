@@ -7,6 +7,7 @@ from rich.console import Console
 import typer
 
 from ehitk.download import DownloadJob, destination_for_url, download_jobs, write_batch_script
+from ehitk.fields import value_field_rows
 from ehitk.manifest import ManifestEntry, append_manifest_entry
 from ehitk.output import render_or_export_rows, validate_export_options
 from ehitk.query import (
@@ -21,6 +22,35 @@ from ehitk.terms import ensure_terms_accepted
 from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 
 app = typer.Typer(help="Query, summarize, and fetch hologenomes.", no_args_is_help=True)
+
+
+@app.command(help="List fields accepted by hologenome values --field.")
+def fields(
+    csv: bool = typer.Option(
+        False,
+        "--csv",
+        help="Write fields as CSV to stdout, or to --output-file.",
+    ),
+    tsv: bool = typer.Option(
+        False,
+        "--tsv",
+        help="Write fields as TSV to stdout, or to --output-file.",
+    ),
+    output_file: Path | None = typer.Option(
+        None,
+        "--output-file",
+        help="Write CSV or TSV output to this file instead of stdout.",
+    ),
+) -> None:
+    render_or_export_rows(
+        Console(),
+        ("field", "type", "resolves_to"),
+        value_field_rows("hologenomes"),
+        title="Hologenome value fields",
+        csv_output=csv,
+        tsv_output=tsv,
+        output_file=output_file,
+    )
 
 
 @app.command(help="List hologenome records that match host, sample, geography, and data filters.")

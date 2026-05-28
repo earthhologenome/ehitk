@@ -128,17 +128,20 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
 def test_entity_help_documents_subcommands() -> None:
     expected = {
         "specimens": (
+            "List fields accepted by specimen values",
             "List specimen records that match host taxonomy",
             "Count distinct values for a specimen field",
             "Summarize the number and composition",
         ),
         "hologenomes": (
+            "List fields accepted by hologenome values",
             "List hologenome records that match host",
             "Count distinct values for a hologenome field",
             "Download matching paired-read files",
             "data volume of matching",
         ),
         "mags": (
+            "List fields accepted by MAG values",
             "List MAG records that match taxonomy",
             "Count distinct values for a MAG field",
             "Download matching MAG FASTA files",
@@ -440,6 +443,16 @@ def test_hologenomes_values_cli() -> None:
     assert result.exit_code == 0
     assert "value" in result.output.lower()
     assert "count" in result.output.lower()
+
+
+def test_hologenomes_fields_cli_lists_value_fields_and_aliases() -> None:
+    result = runner.invoke(app, ["hologenomes", "fields", "--csv"])
+    assert result.exit_code == 0
+    lines = result.stdout.splitlines()
+    assert lines[0] == "field,type,resolves_to"
+    assert "country,field,country" in lines
+    assert "biome_name,field,biome_name" in lines
+    assert "biome,alias,biome_name" in lines
 
 
 def test_mags_values_cli_supports_field_alias() -> None:
