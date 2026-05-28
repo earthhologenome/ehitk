@@ -264,6 +264,54 @@ def test_hologenomes_query_cli_supports_data_range() -> None:
     assert sample["hologenome_id"] in result.stdout
 
 
+def test_hologenomes_query_cli_supports_split_biome_filters() -> None:
+    sample = _sample_row(
+        """
+        SELECT hologenome_id, biome_envo_id, biome_name
+        FROM hologenomes_with_specimen
+        WHERE biome_envo_id IS NOT NULL AND biome_name IS NOT NULL
+        LIMIT 1
+        """
+    )
+    result = runner.invoke(
+        app,
+        [
+            "hologenomes",
+            "query",
+            "--biome-envo-id",
+            sample["biome_envo_id"],
+            "--biome-name",
+            sample["biome_name"],
+            "--limit",
+            "1",
+            "--columns",
+            "hologenome_id,biome_envo_id,biome_name",
+        ],
+    )
+    assert result.exit_code == 0
+    assert sample["hologenome_id"] in result.stdout
+    assert sample["biome_envo_id"] in result.stdout
+    assert sample["biome_name"] in result.stdout
+
+
+def test_hologenomes_query_cli_expands_biome_alias_descendants() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "hologenomes",
+            "query",
+            "--biome",
+            "ENVO:01000175",
+            "--limit",
+            "1",
+            "--columns",
+            "hologenome_id,biome_envo_id,biome_name",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "ENVO:01000221" in result.stdout or "ENVO:01000220" in result.stdout
+
+
 def test_specimens_query_cli_supports_weight_and_length_ranges() -> None:
     sample = _sample_row(
         """
@@ -346,6 +394,42 @@ def test_mags_query_cli_with_host_filter() -> None:
     )
     assert result.exit_code == 0
     assert "EHM" in result.stdout
+
+
+def test_specimens_query_cli_expands_host_taxid_descendants() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "specimens",
+            "query",
+            "--host-taxid",
+            "8509",
+            "--limit",
+            "1",
+            "--columns",
+            "specimen_id,host_taxid,host_order",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "Squamata" in result.stdout
+
+
+def test_mags_query_cli_filters_by_biome_descendants() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--biome",
+            "ENVO:01000175",
+            "--limit",
+            "1",
+            "--columns",
+            "mag_id,biome_envo_id,biome_name",
+        ],
+    )
+    assert result.exit_code == 0
+    assert "ENVO:01000221" in result.stdout or "ENVO:01000220" in result.stdout
 
 
 def test_hologenomes_values_cli() -> None:

@@ -16,7 +16,7 @@ Basic usage
    with ehitk.Database() as ehidb:
        mags = ehidb.mags.query(
            quality="high",
-           host_taxid=562,
+           host_taxid=40674,
            columns=("mag_id", "quality", "mag_genus", "host_species"),
        )
 
@@ -64,8 +64,9 @@ options, with underscores instead of hyphens.
        )
        hologenomes = ehidb.hologenomes.query(
            country="Denmark",
+           biome_envo_id="ENVO:01000175",
            data_min=1.0,
-           columns=("hologenome_id", "country", "data_gb"),
+           columns=("hologenome_id", "biome_envo_id", "biome_name", "country", "data_gb"),
        )
        mags = ehidb.mags.query(
            quality=("high", "medium"),
@@ -75,6 +76,9 @@ options, with underscores instead of hyphens.
 
 Filter values may be strings, numbers, or sequences. Sequence values are treated
 like comma-separated CLI filter values.
+ENVO identifier filters and NCBI ``host_taxid`` filters include catalog
+descendants when those descendants are present in the bundled hierarchy
+resources.
 
 Values and stats
 ----------------

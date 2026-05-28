@@ -60,7 +60,7 @@ Default columns
 
 ``hologenomes``
    ``hologenome_id``, ``specimen_id``, ``sample_type``, ``host_species``,
-   ``biome``, ``data_gb``.
+   ``biome_envo_id``, ``biome_name``, ``data_gb``.
 
 ``mags``
    ``mag_id``, ``host_species``, ``quality``, ``completeness``,
@@ -74,6 +74,7 @@ The ``values`` action counts distinct values for any available query field:
 .. code-block:: bash
 
    ehitk specimens values --field host_order
+   ehitk hologenomes values --field biome_name
    ehitk hologenomes values --field data_gb
    ehitk mags values --field genus
 

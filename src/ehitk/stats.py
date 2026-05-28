@@ -94,7 +94,8 @@ def _hologenome_stats(
             COUNT(DISTINCT specimen_id) AS distinct_specimens,
             COUNT(DISTINCT release) AS distinct_releases,
             COUNT(DISTINCT host_species) AS distinct_host_species,
-            COUNT(DISTINCT biome) AS distinct_biomes,
+            COUNT(DISTINCT biome_envo_id) AS distinct_biome_envo_ids,
+            COUNT(DISTINCT biome_name) AS distinct_biome_names,
             SUM(CASE WHEN data IS NOT NULL THEN 1 ELSE 0 END) AS with_data,
             SUM(data) AS total_data_gb,
             AVG(data) AS avg_data_gb,
@@ -125,7 +126,8 @@ def _hologenome_stats(
             ("Distinct specimens", "distinct_specimens"),
             ("Distinct releases", "distinct_releases"),
             ("Distinct host species", "distinct_host_species"),
-            ("Distinct biomes", "distinct_biomes"),
+            ("Distinct biome ENVO IDs", "distinct_biome_envo_ids"),
+            ("Distinct biome names", "distinct_biome_names"),
             ("With data", "with_data"),
             ("Available data (GB total)", "total_data_gb"),
             ("Data per hologenome (GB avg/min/max)", "data_gb_range"),
@@ -148,9 +150,9 @@ def _hologenome_stats(
                 aggregate_key="data_gb",
             ),
             StatBreakdown(
-                title="Top biomes",
-                value_header="biome",
-                rows=_rows_as_dicts(_top_counts_with_data(connection, base_sql, parameters, "biome")),
+                title="Top biome names",
+                value_header="biome_name",
+                rows=_rows_as_dicts(_top_counts_with_data(connection, base_sql, parameters, "biome_name")),
                 aggregate_header="data_gb",
                 aggregate_key="data_gb",
             ),
@@ -467,4 +469,3 @@ def _format_gb(value: Any) -> str:
     if value is None:
         return "n/a"
     return f"{value:,.2f}"
-

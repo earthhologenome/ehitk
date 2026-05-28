@@ -113,6 +113,64 @@ def test_query_rows_returns_hologenome_data_column() -> None:
     assert "data_gb" in rows[0].keys()
 
 
+def test_query_rows_filters_hologenomes_by_split_biome_fields() -> None:
+    sample = _sample_row(
+        """
+        SELECT hologenome_id, biome_envo_id, biome_name
+        FROM hologenomes_with_specimen
+        WHERE biome_envo_id IS NOT NULL AND biome_name IS NOT NULL
+        LIMIT 1
+        """
+    )
+
+    rows = query_rows(
+        default_catalog_path(),
+        "hologenomes",
+        filters={
+            "biome_envo_id": sample["biome_envo_id"],
+            "biome_name": sample["biome_name"],
+        },
+        limit=5,
+        columns="hologenome_id,biome_envo_id,biome_name",
+    )
+
+    assert rows
+    assert any(row["hologenome_id"] == sample["hologenome_id"] for row in rows)
+    assert all(row["biome_envo_id"].startswith("ENVO:") for row in rows)
+
+
+def test_query_rows_expands_biome_envo_descendants() -> None:
+    rows = query_rows(
+        default_catalog_path(),
+        "hologenomes",
+        filters={"biome_envo_id": "ENVO:01000175"},
+        limit=None,
+        columns="hologenome_id,biome_envo_id,biome_name",
+    )
+
+    biome_ids = {row["biome_envo_id"] for row in rows}
+    biome_names = {row["biome_name"] for row in rows}
+    assert "ENVO:01000221" in biome_ids
+    assert "ENVO:01000220" in biome_ids
+    assert "Temperate woodland" in biome_names
+    assert "Tropical woodland" in biome_names
+
+
+def test_query_rows_expands_legacy_biome_alias_when_value_is_envo_id() -> None:
+    rows = query_rows(
+        default_catalog_path(),
+        "hologenomes",
+        filters={"biome": "ENVO:01000175"},
+        limit=5,
+        columns="hologenome_id,biome_envo_id",
+    )
+
+    assert rows
+    assert {row["biome_envo_id"] for row in rows}.issubset(
+        {"ENVO:01000220", "ENVO:01000221"}
+    )
+
+
 def test_query_rows_returns_mags() -> None:
     rows = query_rows(
         default_catalog_path(),
@@ -158,6 +216,35 @@ def test_query_rows_returns_mags_with_host_taxonomy() -> None:
     )
     assert rows
     assert rows[0]["host_species"] == "Sciurus carolinensis"
+
+
+def test_query_rows_expands_host_taxid_descendants() -> None:
+    rows = query_rows(
+        default_catalog_path(),
+        "specimens",
+        filters={"host_taxid": "8509"},
+        limit=10,
+        columns="specimen_id,host_taxid,host_order",
+    )
+
+    assert rows
+    assert all(row["host_order"] == "Squamata" for row in rows)
+    assert any(str(row["host_taxid"]).strip() != "8509" for row in rows)
+
+
+def test_query_rows_filters_mags_by_biome_envo_descendants() -> None:
+    rows = query_rows(
+        default_catalog_path(),
+        "mags",
+        filters={"biome_envo_id": "ENVO:01000175"},
+        limit=10,
+        columns="mag_id,biome_envo_id",
+    )
+
+    assert rows
+    assert {row["biome_envo_id"] for row in rows}.issubset(
+        {"ENVO:01000220", "ENVO:01000221"}
+    )
 
 
 def test_query_rows_filters_hologenomes_by_country_and_coordinate_range() -> None:
@@ -308,6 +395,11 @@ def test_headers_for_accepts_legacy_data_alias() -> None:
     assert headers_for("mags", columns="data") == ("data_gb",)
 
 
+def test_headers_for_accepts_legacy_biome_alias() -> None:
+    assert headers_for("hologenomes", columns="biome") == ("biome_name",)
+    assert headers_for("mags", columns="biome") == ("biome_name",)
+
+
 def test_build_query_with_explicit_columns() -> None:
     sql, _ = build_query(
         "mags",
@@ -395,3 +487,16 @@ def test_build_filtered_source_query_supports_multi_value_quality_and_ids() -> N
     assert "(completeness >= 90 AND contamination <= 5)" in sql
     assert "(completeness >= 50 AND contamination <= 10)" in sql
     assert params == ["EHM00001", "EHM00002"]
+
+
+def test_build_filtered_source_query_expands_descendant_filters() -> None:
+    sql, params = build_filtered_source_query(
+        "hologenomes",
+        filters={"biome_envo_id": "ENVO:01000175", "host_taxid": "8509"},
+    )
+
+    assert "TRIM(host_taxid)" in sql
+    assert "TRIM(biome_envo_id)" in sql
+    assert "ENVO:01000221" in params
+    assert "ENVO:01000220" in params
+    assert "64176" in params

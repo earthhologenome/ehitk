@@ -9,6 +9,7 @@ Query specimens
 .. code-block:: bash
 
    ehitk specimens query --host-species "Podarcis muralis"
+   ehitk specimens query --host-taxid 8509
    ehitk specimens query --host-lineage Mammalia --sex Female
    ehitk specimens query --weight-min 8 --weight-max 9 --length-min 40 --length-max 41
    ehitk specimens query --specimen-id SD00508 --columns specimen_id,host_species,sex
@@ -20,7 +21,8 @@ Filters
    Exact specimen ID.
 
 ``--host-taxid``
-   Exact host taxon ID.
+   NCBI host taxon ID. Catalog descendants are included, so higher-level
+   identifiers such as ``8509`` match descendant host species.
 
 ``--host-species``
    Exact host species name.

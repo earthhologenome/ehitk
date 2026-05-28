@@ -43,7 +43,8 @@ class Hologenome:
     date: str | None = None
     url1: str | None = None
     url2: str | None = None
-    biome: str | None = None
+    biome_envo_id: str | None = None
+    biome_name: str | None = None
     data_gb: float | None = None
     specimen_id: str | None = None
     host_taxid: str | int | None = None
@@ -85,7 +86,8 @@ class Mag:
     date: str | None = None
     url1: str | None = None
     url2: str | None = None
-    biome: str | None = None
+    biome_envo_id: str | None = None
+    biome_name: str | None = None
     data_gb: float | None = None
     specimen_id: str | None = None
     host_taxid: str | int | None = None

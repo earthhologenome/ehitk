@@ -14,7 +14,7 @@ Use ``ehitk.Database`` when you want typed Python objects instead of CLI output.
    import ehitk
 
    with ehitk.Database() as ehidb:
-       mags = ehidb.mags.query(quality="high", host_taxid=562, limit=5)
+       mags = ehidb.mags.query(quality="high", host_taxid=40674, limit=5)
        countries = ehidb.hologenomes.values("country", host_lineage="Reptilia")
 
    for mag in mags:
@@ -35,6 +35,7 @@ Find hologenome datasets
 .. code-block:: bash
 
    ehitk hologenomes query --host-species "Podarcis muralis" --limit 5
+   ehitk hologenomes query --biome ENVO:01000175 --limit 5
    ehitk hologenomes values --field country --limit 10
    ehitk hologenomes stats --host-lineage Reptilia
 

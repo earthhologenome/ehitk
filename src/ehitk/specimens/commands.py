@@ -28,7 +28,7 @@ def query(
         help="Path to an alternate SQLite database. Defaults to the bundled database.",
     ),
     specimen_id: str | None = typer.Option(None, help="Exact specimen ID."),
-    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_taxid: str | None = typer.Option(None, help="Host taxon ID; catalog descendants are included."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
     host_lineage: str | None = typer.Option(
         None,
@@ -123,7 +123,7 @@ def values(
         help="Field to summarize with distinct values and counts.",
     ),
     specimen_id: str | None = typer.Option(None, help="Exact specimen ID."),
-    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_taxid: str | None = typer.Option(None, help="Host taxon ID; catalog descendants are included."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
     host_lineage: str | None = typer.Option(
         None,
@@ -210,7 +210,7 @@ def stats(
         help="Path to an alternate SQLite database. Defaults to the bundled database.",
     ),
     specimen_id: str | None = typer.Option(None, help="Exact specimen ID."),
-    host_taxid: str | None = typer.Option(None, help="Exact host taxon ID."),
+    host_taxid: str | None = typer.Option(None, help="Host taxon ID; catalog descendants are included."),
     host_species: str | None = typer.Option(None, help="Exact host species name."),
     host_lineage: str | None = typer.Option(
         None,

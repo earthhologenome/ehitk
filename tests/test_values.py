@@ -26,6 +26,30 @@ def test_value_rows_returns_hologenome_data_counts() -> None:
     assert rows[0]["count"] >= 1
 
 
+def test_value_rows_returns_hologenome_biome_name_counts() -> None:
+    field, rows = value_rows(
+        str(default_catalog_path()),
+        target="hologenomes",
+        field="biome_name",
+        limit=5,
+    )
+    assert field == "biome_name"
+    assert rows
+    assert rows[0]["count"] >= 1
+
+
+def test_value_rows_accepts_legacy_hologenome_biome_alias() -> None:
+    field, rows = value_rows(
+        str(default_catalog_path()),
+        target="hologenomes",
+        field="biome",
+        limit=5,
+    )
+    assert field == "biome_name"
+    assert rows
+    assert rows[0]["count"] >= 1
+
+
 def test_value_rows_accepts_legacy_hologenome_data_alias() -> None:
     field, rows = value_rows(
         str(default_catalog_path()),

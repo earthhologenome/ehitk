@@ -53,6 +53,45 @@ def test_database_query_accepts_python_native_filter_values() -> None:
     assert any(specimen.specimen_id == sample["specimen_id"] for specimen in specimens)
 
 
+def test_database_query_expands_host_taxid_descendants() -> None:
+    with ehitk.Database() as database:
+        specimens = database.specimens.query(
+            host_taxid=8509,
+            limit=5,
+            columns=("specimen_id", "host_taxid", "host_order"),
+        )
+
+    assert specimens
+    assert all(specimen.host_order == "Squamata" for specimen in specimens)
+
+
+def test_database_query_returns_split_biome_fields() -> None:
+    sample = _sample_row(
+        """
+        SELECT hologenome_id, biome_envo_id, biome_name
+        FROM hologenomes_with_specimen
+        WHERE biome_envo_id IS NOT NULL AND biome_name IS NOT NULL
+        LIMIT 1
+        """
+    )
+
+    with ehitk.Database() as database:
+        hologenomes = database.hologenomes.query(
+            biome_envo_id=sample["biome_envo_id"],
+            biome_name=sample["biome_name"],
+            limit=5,
+            columns=("hologenome_id", "biome_envo_id", "biome_name"),
+        )
+
+    assert hologenomes
+    assert any(
+        hologenome.hologenome_id == sample["hologenome_id"]
+        for hologenome in hologenomes
+    )
+    assert hologenomes[0].biome_envo_id.startswith("ENVO:")
+    assert hologenomes[0].biome_name
+
+
 def test_database_values_returns_structured_value_counts() -> None:
     with ehitk.Database() as database:
         values = database.mags.values("quality", limit=3)
@@ -117,4 +156,3 @@ def test_database_rejects_calls_after_close() -> None:
         assert "closed" in str(exc)
     else:
         raise AssertionError("Expected RuntimeError after Database.close().")
-

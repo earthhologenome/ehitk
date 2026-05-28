@@ -15,6 +15,8 @@ DEFAULT_QUERY_LIMIT = 50
 PACKAGE_DATA = resources.files("ehitk").joinpath("data")
 CATALOG_RESOURCE = PACKAGE_DATA.joinpath("ehitk.sqlite")
 CUSTOM_COLUMNS_RESOURCE = PACKAGE_DATA.joinpath("custom_columns.json")
+ENVO_DESCENDANTS_RESOURCE = PACKAGE_DATA.joinpath("envo_descendants.json")
+HOST_TAXON_DESCENDANTS_RESOURCE = PACKAGE_DATA.joinpath("host_taxon_descendants.json")
 _RESOURCE_PATHS = ExitStack()
 atexit.register(_RESOURCE_PATHS.close)
 
@@ -46,7 +48,8 @@ MAGS_WITH_SPECIMEN_SOURCE = """
         mgws."date" AS "date",
         mgws."url1" AS "url1",
         mgws."url2" AS "url2",
-        mgws."biome" AS "biome",
+        mgws."biome_envo_id" AS "biome_envo_id",
+        mgws."biome_name" AS "biome_name",
         mgws."data" AS "data",
         mgws."specimen_id" AS "specimen_id",
         mgws."host_taxid" AS "host_taxid",
@@ -113,7 +116,8 @@ TARGETS: dict[str, TargetConfig] = {
             "date": "date",
             "url1": "url1",
             "url2": "url2",
-            "biome": "biome",
+            "biome_envo_id": "biome_envo_id",
+            "biome_name": "biome_name",
             "data_gb": "data AS data_gb",
             "specimen_id": "specimen_id",
             "host_taxid": "host_taxid",
@@ -136,7 +140,8 @@ TARGETS: dict[str, TargetConfig] = {
             "date",
             "url1",
             "url2",
-            "biome",
+            "biome_envo_id",
+            "biome_name",
             "data_gb",
             "specimen_id",
             "host_taxid",
@@ -159,7 +164,8 @@ TARGETS: dict[str, TargetConfig] = {
             "host_family",
             "host_order",
             "host_class",
-            "biome",
+            "biome_envo_id",
+            "biome_name",
             "url1",
             "url2",
         ),
@@ -173,7 +179,8 @@ TARGETS: dict[str, TargetConfig] = {
             "host_family",
             "host_order",
             "host_class",
-            "biome",
+            "biome_envo_id",
+            "biome_name",
             "url1",
             "url2",
         ),
@@ -209,7 +216,8 @@ TARGETS: dict[str, TargetConfig] = {
             "date": "date",
             "url1": "url1",
             "url2": "url2",
-            "biome": "biome",
+            "biome_envo_id": "biome_envo_id",
+            "biome_name": "biome_name",
             "data_gb": "data AS data_gb",
             "specimen_id": "specimen_id",
             "host_taxid": "host_taxid",
@@ -249,7 +257,8 @@ TARGETS: dict[str, TargetConfig] = {
             "date",
             "url1",
             "url2",
-            "biome",
+            "biome_envo_id",
+            "biome_name",
             "data_gb",
             "specimen_id",
             "host_taxid",
@@ -354,9 +363,11 @@ TARGETS: dict[str, TargetConfig] = {
 
 VALUE_FIELD_ALIASES: dict[str, dict[str, str]] = {
     "hologenomes": {
+        "biome": "biome_name",
         "data": "data_gb",
     },
     "mags": {
+        "biome": "biome_name",
         "data": "data_gb",
         "genus": "mag_genus",
         "species": "mag_species",
@@ -368,9 +379,11 @@ VALUE_FIELD_ALIASES: dict[str, dict[str, str]] = {
 JSON_ARRAY_VALUE_FIELDS = {"weight", "length"}
 QUERY_COLUMN_ALIASES: dict[str, dict[str, str]] = {
     "hologenomes": {
+        "biome": "biome_name",
         "data": "data_gb",
     },
     "mags": {
+        "biome": "biome_name",
         "data": "data_gb",
     },
 }
@@ -405,6 +418,24 @@ def _custom_query_headers() -> dict[str, dict[str, tuple[str, ...]]]:
         target: {preset: tuple(columns) for preset, columns in presets.items()}
         for target, presets in raw.items()
     }
+
+
+def _load_descendant_resource(resource: Any) -> dict[str, tuple[str, ...]]:
+    if not resource.is_file():
+        return {}
+    with resource.open("r", encoding="utf-8") as handle:
+        raw = json.load(handle)
+    return {str(key): tuple(str(value) for value in values) for key, values in raw.items()}
+
+
+@lru_cache(maxsize=1)
+def _envo_descendants() -> dict[str, tuple[str, ...]]:
+    return _load_descendant_resource(ENVO_DESCENDANTS_RESOURCE)
+
+
+@lru_cache(maxsize=1)
+def _host_taxon_descendants() -> dict[str, tuple[str, ...]]:
+    return _load_descendant_resource(HOST_TAXON_DESCENDANTS_RESOURCE)
 
 
 def headers_for(
@@ -494,10 +525,36 @@ def _normalize_prefixed_value(value: str, prefix: str) -> str:
     return value
 
 
-def _split_filter_values(value: str | None) -> list[str]:
+def _split_filter_values(value: Any | None) -> list[str]:
     if value is None:
         return []
-    return [part.strip() for part in value.split(",") if part.strip()]
+    return [part.strip() for part in str(value).split(",") if part.strip()]
+
+
+def _combine_filter_values(value: Any | None, extra_values: list[str]) -> str | None:
+    values = _split_filter_values(value) + extra_values
+    return ",".join(values) if values else None
+
+
+def _expanded_descendant_values(
+    value: Any | None,
+    descendants: Mapping[str, tuple[str, ...]],
+    *,
+    normalize_key: Any = str,
+) -> list[str]:
+    expanded: list[str] = []
+    seen: set[str] = set()
+    for raw_value in _split_filter_values(value):
+        key = normalize_key(raw_value)
+        for descendant in descendants.get(key, (key,)):
+            if descendant not in seen:
+                seen.add(descendant)
+                expanded.append(descendant)
+    return expanded
+
+
+def _is_envo_id(value: str) -> bool:
+    return value.upper().startswith("ENVO:")
 
 
 def _mag_quality_clause(quality: str) -> str:
@@ -593,6 +650,22 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
             conditions.append(_casefold_one_of(column, len(values)))
             parameters.extend(values)
 
+    def add_descendant_exact(
+        column: str,
+        value: str | None,
+        descendants: Mapping[str, tuple[str, ...]],
+        *,
+        normalize_key: Any = str,
+    ) -> None:
+        values = _expanded_descendant_values(
+            value,
+            descendants,
+            normalize_key=normalize_key,
+        )
+        if values:
+            conditions.append(_casefold_one_of(column, len(values)))
+            parameters.extend(values)
+
     def add_normalized_taxonomy(column: str, prefix: str, value: str | None) -> None:
         values = _split_filter_values(value)
         if values:
@@ -640,7 +713,11 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         parameters.extend(range_parameters)
 
     def add_host_taxonomy_filters() -> None:
-        add_exact("host_taxid", filters.get("host_taxid"))
+        add_descendant_exact(
+            "TRIM(host_taxid)",
+            filters.get("host_taxid"),
+            _host_taxon_descendants(),
+        )
         add_exact("host_species", filters.get("host_species"))
 
         host_lineage_values = _split_filter_values(filters.get("host_lineage"))
@@ -663,11 +740,35 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
             for _ in lineage_columns:
                 parameters.extend(host_lineage_values)
 
+    def add_biome_filters() -> None:
+        biome_alias_values = _split_filter_values(filters.get("biome"))
+        biome_alias_envo_values = [
+            value for value in biome_alias_values if _is_envo_id(value)
+        ]
+        biome_alias_name_values = [
+            value for value in biome_alias_values if not _is_envo_id(value)
+        ]
+        biome_envo_id = _combine_filter_values(
+            filters.get("biome_envo_id"),
+            biome_alias_envo_values,
+        )
+        biome_name = filters.get("biome_name")
+        if biome_name is None:
+            biome_name = _combine_filter_values(None, biome_alias_name_values)
+
+        add_descendant_exact(
+            "TRIM(biome_envo_id)",
+            biome_envo_id,
+            _envo_descendants(),
+            normalize_key=str.upper,
+        )
+        add_exact("biome_name", biome_name)
+
     if target == "hologenomes":
         add_exact("hologenome_id", filters.get("hologenome_id"))
         add_host_taxonomy_filters()
         add_exact("sample_type", filters.get("sample_type"))
-        add_exact("biome", filters.get("biome"))
+        add_biome_filters()
         add_exact("release", filters.get("release"))
         add_exact("country", filters.get("country"))
         add_numeric_range("data", filters.get("data_min"), filters.get("data_max"))
@@ -681,6 +782,7 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         add_exact("release", filters.get("release"))
         add_exact("hologenome_id", filters.get("hologenome_id"))
         add_host_taxonomy_filters()
+        add_biome_filters()
         add_exact("country", filters.get("country"))
         add_numeric_range("latitude", filters.get("latitude_min"), filters.get("latitude_max"))
         add_numeric_range("longitude", filters.get("longitude_min"), filters.get("longitude_max"))

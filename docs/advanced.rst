@@ -33,6 +33,22 @@ This is useful when you want broad host groups:
    ehitk hologenomes query --host-lineage Mammalia
    ehitk mags query --host-lineage Aves
 
+Descendant matching
+-------------------
+
+EHItk bundles compact descendant maps generated from ENVO and NCBI Taxonomy for
+the terms present in the bundled catalog. ENVO identifier filters and NCBI
+``--host-taxid`` filters therefore include catalog descendants:
+
+.. code-block:: bash
+
+   ehitk hologenomes query --biome ENVO:01000175
+   ehitk specimens query --host-taxid 8509
+   ehitk mags query --host-taxid 40674
+
+If a queried identifier is not present in the bundled descendant map, EHItk
+falls back to matching the exact value.
+
 Advanced SQL predicates
 -----------------------
 
@@ -59,3 +75,8 @@ Use ``--db`` to query a custom SQLite catalog:
    ehitk --db /path/to/ehitk.sqlite hologenomes stats --host-lineage Reptilia
 
 The option can be placed at the top level or on an action command.
+The Python API accepts the same catalog path with
+``ehitk.Database("/path/to/ehitk.sqlite")``.
+
+This is also how legacy EHI database files from older data releases can be used
+after installing a newer EHItk package.

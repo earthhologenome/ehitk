@@ -22,6 +22,7 @@ pip install ehitk
 
 ```bash
 ehitk specimens query --host-species "Podarcis muralis" --limit 5
+ehitk hologenomes query --biome ENVO:01000175 --limit 5
 ehitk hologenomes values --field country --limit 10
 ehitk mags stats --quality high --species "Escherichia coli"
 ehitk mags query --quality high --csv | head
@@ -34,7 +35,7 @@ Python API:
 import ehitk
 
 with ehitk.Database() as ehidb:
-    mags = ehidb.mags.query(quality="high", host_taxid=562, limit=5)
+    mags = ehidb.mags.query(quality="high", host_taxid=40674, limit=5)
 
 for mag in mags:
     print(mag.mag_id, mag.quality, mag.host_species)
@@ -55,6 +56,24 @@ ehitk specimens --help
 ehitk hologenomes fetch --help
 ehitk mags query --help
 ```
+
+## Bundled database and versioning
+
+EHItk ships with a bundled SQLite EHI database, which is the default database
+used by the command-line interface and Python API. Updating the Python package
+may therefore also update the default EHI database.
+
+Database updates are paired with documented EHI data releases. Older legacy
+database files are archived with those data releases so analyses can be rerun
+against the same database version by passing the file with `--db` or by opening
+it with `ehitk.Database("/path/to/ehitk.sqlite")`.
+
+EHItk package versions follow Semantic Versioning for the software interface.
+Database updates that change the SQLite schema, remove or rename fields, or
+otherwise alter command-line or Python API output compatibility are treated as
+breaking changes and require a major version bump. Non-breaking database
+additions or metadata corrections are released as minor or patch versions and
+are documented in the changelog and associated data release notes.
 
 ## Testing and continuous integration
 

@@ -6,9 +6,22 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-28
+
 ### Added
 
-- No unreleased changes yet.
+- Documented the bundled database update policy, legacy database access, and
+  how database releases interact with Semantic Versioning.
+- Added bundled ENVO and NCBI Taxonomy descendant resources so ENVO biome
+  filters and NCBI `host_taxid` filters include catalog descendants.
+
+### Changed
+
+- Split hologenome biome metadata into `biome_envo_id` and `biome_name`
+  fields, replacing the previous merged biome label in query output, filters,
+  documentation, and the bundled SQLite catalog.
+- Added `--biome` as a CLI alias for ENVO biome identifier filtering and
+  enabled parent-hologenome biome filters for MAG queries.
 
 ## [1.1.0] - 2026-05-28
 

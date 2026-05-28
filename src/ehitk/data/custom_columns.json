@@ -5,7 +5,8 @@
       "specimen_id",
       "sample_type",
       "host_species",
-      "biome",
+      "biome_envo_id",
+      "biome_name",
       "data_gb"
     ],
     "url": [
