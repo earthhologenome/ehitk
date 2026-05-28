@@ -8,7 +8,7 @@ import typer
 
 from ehitk.download import DownloadJob, destination_for_url, download_jobs, write_batch_script
 from ehitk.manifest import ManifestEntry, append_manifest_entry
-from ehitk.output import render_or_export_rows, validate_export_paths
+from ehitk.output import render_or_export_rows, validate_export_options
 from ehitk.query import (
     DEFAULT_QUERY_LIMIT,
     QueryValidationError,
@@ -69,19 +69,24 @@ def query(
         "--columns",
         help="Query columns to include: default, all, or a comma-separated list.",
     ),
-    csv: Path | None = typer.Option(
-        None,
+    csv: bool = typer.Option(
+        False,
         "--csv",
-        help="Write query results to a CSV file instead of displaying a table.",
+        help="Write query results as CSV to stdout, or to --output-file.",
     ),
-    tsv: Path | None = typer.Option(
-        None,
+    tsv: bool = typer.Option(
+        False,
         "--tsv",
-        help="Write query results to a TSV file instead of displaying a table.",
+        help="Write query results as TSV to stdout, or to --output-file.",
+    ),
+    output_file: Path | None = typer.Option(
+        None,
+        "--output-file",
+        help="Write CSV or TSV output to this file instead of stdout.",
     ),
 ) -> None:
     console = Console()
-    validate_export_paths(csv, tsv)
+    validate_export_options(csv, tsv, output_file)
 
     filters = {
         "hologenome_id": hologenome_id,
@@ -123,8 +128,9 @@ def query(
         headers_for("hologenomes", columns=columns),
         rows,
         title="Hologenomes",
-        csv_path=csv,
-        tsv_path=tsv,
+        csv_output=csv,
+        tsv_output=tsv,
+        output_file=output_file,
     )
 
 
@@ -174,19 +180,24 @@ def values(
         min=1,
         help="Maximum number of distinct values to print.",
     ),
-    csv: Path | None = typer.Option(
-        None,
+    csv: bool = typer.Option(
+        False,
         "--csv",
-        help="Write value counts to a CSV file instead of displaying a table.",
+        help="Write value counts as CSV to stdout, or to --output-file.",
     ),
-    tsv: Path | None = typer.Option(
-        None,
+    tsv: bool = typer.Option(
+        False,
         "--tsv",
-        help="Write value counts to a TSV file instead of displaying a table.",
+        help="Write value counts as TSV to stdout, or to --output-file.",
+    ),
+    output_file: Path | None = typer.Option(
+        None,
+        "--output-file",
+        help="Write CSV or TSV output to this file instead of stdout.",
     ),
 ) -> None:
     console = Console()
-    validate_export_paths(csv, tsv)
+    validate_export_options(csv, tsv, output_file)
 
     filters = {
         "hologenome_id": hologenome_id,
@@ -230,8 +241,9 @@ def values(
         ("value", "count"),
         rows,
         title=f"Values for {resolved_field}",
-        csv_path=csv,
-        tsv_path=tsv,
+        csv_output=csv,
+        tsv_output=tsv,
+        output_file=output_file,
     )
 
 

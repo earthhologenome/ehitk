@@ -14,11 +14,14 @@ The format follows Keep a Changelog principles and the project versions follow S
   `ehitk hologenomes --help`, and `ehitk mags --help` document their child
   commands.
 - Extended the GitHub Actions test matrix and package classifiers through Python 3.14.
+- Added CSV/TSV streaming to standard output for `query` and `values` commands.
 
 ### Changed
 
 - Reduced the README to a concise project overview with a link to the full
   Read the Docs documentation.
+- Changed `query` and `values` delimited output options to use `--csv` or
+  `--tsv` as format flags, with `--output-file PATH` for file export.
 
 ## [1.0.6] - 2026-03-23
 

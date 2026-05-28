@@ -27,7 +27,8 @@ Actions
 -------
 
 ``query``
-   Prints matching records as a table, or writes them to CSV/TSV.
+   Prints matching records as a rich table by default, or emits CSV/TSV to
+   standard output or ``--output-file``.
 
 ``values``
    Counts distinct values for one field after applying the same filters used by

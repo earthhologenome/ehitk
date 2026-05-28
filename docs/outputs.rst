@@ -6,13 +6,21 @@ Tables, CSV, and TSV
 
 By default, ``query`` and ``values`` commands print rich terminal tables.
 
-Use ``--csv`` or ``--tsv`` to write results to a file:
+Use ``--csv`` or ``--tsv`` to print delimited output to standard output. This
+supports shell pipelines:
 
 .. code-block:: bash
 
-   ehitk specimens query --host-lineage Reptilia --csv specimens.csv
-   ehitk hologenomes values --field country --tsv countries.tsv
-   ehitk mags query --quality high --columns mag_id,quality,url --csv high-quality-mags.csv
+   ehitk specimens query --host-lineage Reptilia --csv
+   ehitk hologenomes values --field country --tsv | head
+
+Add ``--output-file`` to write the CSV or TSV output to a file instead:
+
+.. code-block:: bash
+
+   ehitk specimens query --host-lineage Reptilia --csv --output-file specimens.csv
+   ehitk hologenomes values --field country --tsv --output-file countries.tsv
+   ehitk mags query --quality high --columns mag_id,quality,url --csv --output-file high-quality-mags.csv
 
 Use only one export format at a time.
 
@@ -40,9 +48,9 @@ Examples:
 .. code-block:: bash
 
    ehitk specimens query --columns specimen_id,host_species,sex
-   ehitk hologenomes query --columns url --csv hologenome-urls.csv
+   ehitk hologenomes query --columns url --csv --output-file hologenome-urls.csv
    ehitk mags query --columns all --limit 1
-   ehitk mags query --columns url --tsv mag-urls.tsv
+   ehitk mags query --columns url --tsv --output-file mag-urls.tsv
 
 Default columns
 ---------------

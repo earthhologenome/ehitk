@@ -23,6 +23,8 @@ pip install ehitk
 ehitk specimens query --host-species "Podarcis muralis" --limit 5
 ehitk hologenomes values --field country --limit 10
 ehitk mags stats --quality high --species "Escherichia coli"
+ehitk mags query --quality high --csv | head
+ehitk specimens values --field sex --csv --output-file specimen-sex-values.csv
 ```
 
 ## Documentation

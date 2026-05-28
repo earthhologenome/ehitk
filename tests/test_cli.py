@@ -379,6 +379,7 @@ def test_specimens_values_cli_writes_csv(tmp_path) -> None:
             "--limit",
             "5",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -416,6 +417,7 @@ def test_hologenomes_query_cli_supports_hologenome_id_flag_with_multiple_values(
             "--columns",
             "hologenome_id",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -445,6 +447,7 @@ def test_mags_query_cli_supports_mag_id_flag_with_multiple_values(tmp_path) -> N
             "--columns",
             "mag_id",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -466,6 +469,7 @@ def test_hologenomes_query_cli_writes_csv(tmp_path) -> None:
             "--limit",
             "1",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -474,7 +478,7 @@ def test_hologenomes_query_cli_writes_csv(tmp_path) -> None:
     contents = output_path.read_text(encoding="utf-8")
     assert "hologenome_id" in contents
     assert "Podarcis muralis" in contents
-    assert "Wrote 1 rows" in result.stdout
+    assert "Wrote 1 rows" in result.stderr
 
 
 def test_specimens_query_cli_writes_tsv(tmp_path) -> None:
@@ -489,6 +493,7 @@ def test_specimens_query_cli_writes_tsv(tmp_path) -> None:
             "--limit",
             "1",
             "--tsv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -497,7 +502,7 @@ def test_specimens_query_cli_writes_tsv(tmp_path) -> None:
     contents = output_path.read_text(encoding="utf-8")
     assert "specimen_id\thost_taxid" in contents
     assert "Podarcis muralis" in contents
-    assert "Wrote 1 rows" in result.stdout
+    assert "Wrote 1 rows" in result.stderr
 
 
 def test_query_cli_rejects_csv_and_tsv_together(tmp_path) -> None:
@@ -509,13 +514,69 @@ def test_query_cli_rejects_csv_and_tsv_together(tmp_path) -> None:
             "--limit",
             "1",
             "--csv",
-            str(tmp_path / "out.csv"),
             "--tsv",
-            str(tmp_path / "out.tsv"),
         ],
     )
     assert result.exit_code != 0
     assert "Use only one of --csv or --tsv." in result.output
+
+
+def test_query_cli_rejects_output_file_without_csv_or_tsv(tmp_path) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--limit",
+            "1",
+            "--output-file",
+            str(tmp_path / "out.csv"),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "Use --output-file only with --csv or --tsv." in result.output
+
+
+def test_query_cli_writes_csv_to_stdout_for_piping() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "mags",
+            "query",
+            "--host-species",
+            "Sciurus carolinensis",
+            "--limit",
+            "1",
+            "--columns",
+            "mag_id,host_species",
+            "--csv",
+        ],
+    )
+    assert result.exit_code == 0
+    lines = result.stdout.splitlines()
+    assert lines[0] == "mag_id,host_species"
+    assert "Sciurus carolinensis" in lines[1]
+    assert "MAGs" not in result.stdout
+
+
+def test_values_cli_writes_tsv_to_stdout_for_piping() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "specimens",
+            "values",
+            "--field",
+            "sex",
+            "--limit",
+            "1",
+            "--tsv",
+        ],
+    )
+    assert result.exit_code == 0
+    lines = result.stdout.splitlines()
+    assert lines[0] == "value\tcount"
+    assert "\t" in lines[1]
+    assert "Values for" not in result.stdout
 
 
 def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
@@ -534,6 +595,7 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
             "--columns",
             "default",
             "--csv",
+            "--output-file",
             str(default_output_path),
         ],
     )
@@ -547,6 +609,7 @@ def test_query_cli_uses_default_columns_keyword(tmp_path) -> None:
             "--limit",
             "1",
             "--csv",
+            "--output-file",
             str(implicit_output_path),
         ],
     )
@@ -571,6 +634,7 @@ def test_query_cli_writes_selected_columns_to_csv(tmp_path) -> None:
             "--columns",
             "mag_id,host_species,mag_genus",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -591,6 +655,7 @@ def test_mags_query_cli_default_columns_include_quality(tmp_path) -> None:
             "--limit",
             "1",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -614,6 +679,7 @@ def test_mags_query_cli_all_columns_include_quality(tmp_path) -> None:
             "--columns",
             "all",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -636,6 +702,7 @@ def test_query_cli_writes_url_preset_for_hologenomes(tmp_path) -> None:
             "--columns",
             "url",
             "--csv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -658,6 +725,7 @@ def test_query_cli_writes_url_preset_for_mags(tmp_path) -> None:
             "--columns",
             "url",
             "--tsv",
+            "--output-file",
             str(output_path),
         ],
     )
@@ -680,6 +748,7 @@ def test_query_cli_columns_all_includes_extended_fields(tmp_path) -> None:
             "--columns",
             "all",
             "--tsv",
+            "--output-file",
             str(output_path),
         ],
     )

@@ -48,7 +48,7 @@ Summarize specimens
 
    ehitk specimens stats --host-lineage Reptilia
    ehitk specimens values --field host_order
-   ehitk specimens values --field sex --csv specimen-sex-values.csv
+   ehitk specimens values --field sex --csv --output-file specimen-sex-values.csv
 
 Available query columns
 -----------------------
