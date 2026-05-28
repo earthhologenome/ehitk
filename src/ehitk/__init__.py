@@ -6,7 +6,30 @@ from importlib.metadata import PackageNotFoundError, version as package_version
 from pathlib import Path
 import re
 
-__all__ = ["__version__"]
+from ehitk.api import (
+    Database,
+    FetchSummary,
+    Hologenome,
+    Mag,
+    StatBreakdown,
+    Specimen,
+    TargetStats,
+    ValueCount,
+    ValuesResult,
+)
+
+__all__ = [
+    "__version__",
+    "Database",
+    "FetchSummary",
+    "Hologenome",
+    "Mag",
+    "StatBreakdown",
+    "Specimen",
+    "TargetStats",
+    "ValueCount",
+    "ValuesResult",
+]
 
 
 def _version_from_pyproject() -> str:

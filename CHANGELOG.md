@@ -8,6 +8,12 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 ### Added
 
+- No unreleased changes yet.
+
+## [1.1.0] - 2026-05-28
+
+### Added
+
 - Added Read the Docs documentation with installation, quick-start, command,
   entity-specific, output, fetch, and advanced usage pages.
 - Added descriptions for entity subcommands so `ehitk specimens --help`,
@@ -15,6 +21,12 @@ The format follows Keep a Changelog principles and the project versions follow S
   commands.
 - Extended the GitHub Actions test matrix and package classifiers through Python 3.14.
 - Added CSV/TSV streaming to standard output for `query` and `values` commands.
+- Documented the repository's pytest unit tests and GitHub Actions continuous
+  integration setup.
+- Added a public Python API via `ehitk.Database`, typed record dataclasses,
+  structured `values`/`stats` results, and programmatic `fetch` summaries.
+- Added Python API documentation with query, values, stats, alternate database,
+  and batch fetch examples.
 
 ### Changed
 
@@ -22,6 +34,8 @@ The format follows Keep a Changelog principles and the project versions follow S
   Read the Docs documentation.
 - Changed `query` and `values` delimited output options to use `--csv` or
   `--tsv` as format flags, with `--output-file PATH` for file export.
+- Split stats calculation from Rich rendering so the CLI and Python API can
+  share the same summary logic.
 
 ## [1.0.6] - 2026-03-23
 

@@ -4,6 +4,22 @@ Quick start
 Start with ``query`` when you want rows, ``values`` when you want to discover
 available filter values, and ``stats`` when you want a summary of a subset.
 
+Python API
+----------
+
+Use ``ehitk.Database`` when you want typed Python objects instead of CLI output.
+
+.. code-block:: python
+
+   import ehitk
+
+   with ehitk.Database() as ehidb:
+       mags = ehidb.mags.query(quality="high", host_taxid=562, limit=5)
+       countries = ehidb.hologenomes.values("country", host_lineage="Reptilia")
+
+   for mag in mags:
+       print(mag.mag_id, mag.quality, mag.host_species)
+
 Inspect specimen metadata
 -------------------------
 

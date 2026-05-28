@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 import sqlite3
 from typing import Any, Mapping
 
@@ -18,14 +19,32 @@ END
 """
 
 
-def render_target_stats(
-    console: Console,
+@dataclass(frozen=True, slots=True)
+class StatBreakdown:
+    title: str
+    value_header: str
+    rows: tuple[dict[str, Any], ...]
+    aggregate_header: str | None = None
+    aggregate_key: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class TargetStats:
+    target: str
+    title: str
+    summary: dict[str, Any]
+    summary_labels: tuple[tuple[str, str], ...]
+    breakdowns: tuple[StatBreakdown, ...]
+    empty_message: str | None = None
+
+
+def target_stats(
     *,
     catalog_path: str,
     target: str,
     filters: Mapping[str, Any] | None = None,
     where: str | None = None,
-) -> None:
+) -> TargetStats:
     resolved_catalog = resolve_catalog_path(catalog_path)
     base_sql, parameters = build_filtered_source_query(
         target,
@@ -37,24 +56,36 @@ def render_target_stats(
         connection.row_factory = sqlite3.Row
 
         if target == "hologenomes":
-            _render_hologenome_stats(console, connection, base_sql, parameters)
-            return
+            return _hologenome_stats(connection, base_sql, parameters)
         if target == "mags":
-            _render_mag_stats(console, connection, base_sql, parameters)
-            return
+            return _mag_stats(connection, base_sql, parameters)
         if target == "specimens":
-            _render_specimen_stats(console, connection, base_sql, parameters)
-            return
+            return _specimen_stats(connection, base_sql, parameters)
 
     raise ValueError(f"Unsupported stats target: {target}")
 
 
-def _render_hologenome_stats(
+def render_target_stats(
     console: Console,
+    *,
+    catalog_path: str,
+    target: str,
+    filters: Mapping[str, Any] | None = None,
+    where: str | None = None,
+) -> None:
+    _render_stats(console, target_stats(
+        catalog_path=catalog_path,
+        target=target,
+        filters=filters,
+        where=where,
+    ))
+
+
+def _hologenome_stats(
     connection: sqlite3.Connection,
     base_sql: str,
     parameters: list[Any],
-) -> None:
+) -> TargetStats:
     summary = _fetchone(
         connection,
         f"""
@@ -76,61 +107,62 @@ def _render_hologenome_stats(
         parameters,
     )
     if summary["matched_hologenomes"] == 0:
-        console.print("No matching hologenomes found.")
-        return
+        return TargetStats(
+            target="hologenomes",
+            title="Hologenome Stats",
+            summary=dict(summary),
+            summary_labels=(),
+            breakdowns=(),
+            empty_message="No matching hologenomes found.",
+        )
 
-    _print_summary_lines(
-        console,
-        "Hologenome Stats",
-        (
-            ("Matched hologenomes", summary["matched_hologenomes"]),
-            ("Distinct specimens", summary["distinct_specimens"]),
-            ("Distinct releases", summary["distinct_releases"]),
-            ("Distinct host species", summary["distinct_host_species"]),
-            ("Distinct biomes", summary["distinct_biomes"]),
-            ("With data", summary["with_data"]),
-            ("Available data (GB total)", _format_gb(summary["total_data_gb"])),
-            (
-                "Data per hologenome (GB avg/min/max)",
-                _format_range(summary["avg_data_gb"], summary["min_data_gb"], summary["max_data_gb"]),
+    return TargetStats(
+        target="hologenomes",
+        title="Hologenome Stats",
+        summary=dict(summary),
+        summary_labels=(
+            ("Matched hologenomes", "matched_hologenomes"),
+            ("Distinct specimens", "distinct_specimens"),
+            ("Distinct releases", "distinct_releases"),
+            ("Distinct host species", "distinct_host_species"),
+            ("Distinct biomes", "distinct_biomes"),
+            ("With data", "with_data"),
+            ("Available data (GB total)", "total_data_gb"),
+            ("Data per hologenome (GB avg/min/max)", "data_gb_range"),
+            ("With paired URLs", "with_paired_urls"),
+            ("Missing paired URLs", "missing_paired_urls"),
+        ),
+        breakdowns=(
+            StatBreakdown(
+                title="Top sample types",
+                value_header="sample_type",
+                rows=_rows_as_dicts(_top_counts_with_data(connection, base_sql, parameters, "sample_type")),
+                aggregate_header="data_gb",
+                aggregate_key="data_gb",
             ),
-            ("With paired URLs", summary["with_paired_urls"]),
-            ("Missing paired URLs", summary["missing_paired_urls"]),
+            StatBreakdown(
+                title="Top host species",
+                value_header="host_species",
+                rows=_rows_as_dicts(_top_counts_with_data(connection, base_sql, parameters, "host_species")),
+                aggregate_header="data_gb",
+                aggregate_key="data_gb",
+            ),
+            StatBreakdown(
+                title="Top biomes",
+                value_header="biome",
+                rows=_rows_as_dicts(_top_counts_with_data(connection, base_sql, parameters, "biome")),
+                aggregate_header="data_gb",
+                aggregate_key="data_gb",
+            ),
         ),
     )
 
-    _render_breakdown(
-        console,
-        "Top sample types",
-        "sample_type",
-        _top_counts_with_data(connection, base_sql, parameters, "sample_type"),
-        aggregate_header="data_gb",
-        aggregate_key="data_gb",
-    )
-    _render_breakdown(
-        console,
-        "Top host species",
-        "host_species",
-        _top_counts_with_data(connection, base_sql, parameters, "host_species"),
-        aggregate_header="data_gb",
-        aggregate_key="data_gb",
-    )
-    _render_breakdown(
-        console,
-        "Top biomes",
-        "biome",
-        _top_counts_with_data(connection, base_sql, parameters, "biome"),
-        aggregate_header="data_gb",
-        aggregate_key="data_gb",
-    )
 
-
-def _render_mag_stats(
-    console: Console,
+def _mag_stats(
     connection: sqlite3.Connection,
     base_sql: str,
     parameters: list[Any],
-) -> None:
+) -> TargetStats:
     summary = _fetchone(
         connection,
         f"""
@@ -168,80 +200,64 @@ def _render_mag_stats(
         """,
         parameters,
     )
+    merged_summary = {**dict(summary), **dict(parent_data)}
     if summary["matched_mags"] == 0:
-        console.print("No matching MAGs found.")
-        return
+        return TargetStats(
+            target="mags",
+            title="MAG Stats",
+            summary=merged_summary,
+            summary_labels=(),
+            breakdowns=(),
+            empty_message="No matching MAGs found.",
+        )
 
-    _print_summary_lines(
-        console,
-        "MAG Stats",
-        (
-            ("Matched MAGs", summary["matched_mags"]),
-            ("Distinct hologenomes", summary["distinct_hologenomes"]),
-            ("Distinct specimens", summary["distinct_specimens"]),
-            ("Distinct host species", summary["distinct_host_species"]),
-            ("Distinct releases", summary["distinct_releases"]),
-            ("With URLs", summary["with_urls"]),
-            ("Parent hologenomes with data", parent_data["hologenomes_with_data"]),
-            ("Parent hologenome data (GB total)", _format_gb(parent_data["total_data_gb"])),
-            (
-                "Parent hologenome data (GB avg/min/max)",
-                _format_range(
-                    parent_data["avg_data_gb"],
-                    parent_data["min_data_gb"],
-                    parent_data["max_data_gb"],
-                ),
+    return TargetStats(
+        target="mags",
+        title="MAG Stats",
+        summary=merged_summary,
+        summary_labels=(
+            ("Matched MAGs", "matched_mags"),
+            ("Distinct hologenomes", "distinct_hologenomes"),
+            ("Distinct specimens", "distinct_specimens"),
+            ("Distinct host species", "distinct_host_species"),
+            ("Distinct releases", "distinct_releases"),
+            ("With URLs", "with_urls"),
+            ("Parent hologenomes with data", "hologenomes_with_data"),
+            ("Parent hologenome data (GB total)", "total_data_gb"),
+            ("Parent hologenome data (GB avg/min/max)", "parent_data_gb_range"),
+            ("Completeness (avg/min/max)", "completeness_range"),
+            ("Contamination (avg/min/max)", "contamination_range"),
+        ),
+        breakdowns=(
+            StatBreakdown(
+                title="Quality distribution",
+                value_header="quality",
+                rows=_rows_as_dicts(_top_counts(connection, base_sql, parameters, QUALITY_CASE, limit=3)),
             ),
-            (
-                "Completeness (avg/min/max)",
-                _format_range(
-                    summary["avg_completeness"],
-                    summary["min_completeness"],
-                    summary["max_completeness"],
-                ),
+            StatBreakdown(
+                title="Top MAG genera",
+                value_header="mag_genus",
+                rows=_rows_as_dicts(_top_counts(
+                    connection,
+                    base_sql,
+                    parameters,
+                    "CASE WHEN mag_genus LIKE 'g__%' THEN substr(mag_genus, 4) ELSE mag_genus END",
+                )),
             ),
-            (
-                "Contamination (avg/min/max)",
-                _format_range(
-                    summary["avg_contamination"],
-                    summary["min_contamination"],
-                    summary["max_contamination"],
-                ),
+            StatBreakdown(
+                title="Top host species",
+                value_header="host_species",
+                rows=_rows_as_dicts(_top_counts(connection, base_sql, parameters, "host_species")),
             ),
         ),
     )
 
-    _render_breakdown(
-        console,
-        "Quality distribution",
-        "quality",
-        _top_counts(connection, base_sql, parameters, QUALITY_CASE, limit=3),
-    )
-    _render_breakdown(
-        console,
-        "Top MAG genera",
-        "mag_genus",
-        _top_counts(
-            connection,
-            base_sql,
-            parameters,
-            "CASE WHEN mag_genus LIKE 'g__%' THEN substr(mag_genus, 4) ELSE mag_genus END",
-        ),
-    )
-    _render_breakdown(
-        console,
-        "Top host species",
-        "host_species",
-        _top_counts(connection, base_sql, parameters, "host_species"),
-    )
 
-
-def _render_specimen_stats(
-    console: Console,
+def _specimen_stats(
     connection: sqlite3.Connection,
     base_sql: str,
     parameters: list[Any],
-) -> None:
+) -> TargetStats:
     summary = _fetchone(
         connection,
         f"""
@@ -258,41 +274,70 @@ def _render_specimen_stats(
         parameters,
     )
     if summary["matched_specimens"] == 0:
-        console.print("No matching specimens found.")
+        return TargetStats(
+            target="specimens",
+            title="Specimen Stats",
+            summary=dict(summary),
+            summary_labels=(),
+            breakdowns=(),
+            empty_message="No matching specimens found.",
+        )
+
+    return TargetStats(
+        target="specimens",
+        title="Specimen Stats",
+        summary=dict(summary),
+        summary_labels=(
+            ("Matched specimens", "matched_specimens"),
+            ("Distinct host taxids", "distinct_host_taxids"),
+            ("Distinct host species", "distinct_host_species"),
+            ("Distinct host genera", "distinct_host_genera"),
+            ("Distinct host classes", "distinct_host_classes"),
+            ("With weight", "with_weight"),
+            ("With length", "with_length"),
+        ),
+        breakdowns=(
+            StatBreakdown(
+                title="Top host species",
+                value_header="host_species",
+                rows=_rows_as_dicts(_top_counts(connection, base_sql, parameters, "host_species")),
+            ),
+            StatBreakdown(
+                title="Top host orders",
+                value_header="host_order",
+                rows=_rows_as_dicts(_top_counts(connection, base_sql, parameters, "host_order")),
+            ),
+            StatBreakdown(
+                title="Sex distribution",
+                value_header="sex",
+                rows=_rows_as_dicts(_top_counts(connection, base_sql, parameters, "sex", limit=10)),
+            ),
+        ),
+    )
+
+
+def _render_stats(console: Console, stats: TargetStats) -> None:
+    if stats.empty_message is not None:
+        console.print(stats.empty_message)
         return
 
     _print_summary_lines(
         console,
-        "Specimen Stats",
-        (
-            ("Matched specimens", summary["matched_specimens"]),
-            ("Distinct host taxids", summary["distinct_host_taxids"]),
-            ("Distinct host species", summary["distinct_host_species"]),
-            ("Distinct host genera", summary["distinct_host_genera"]),
-            ("Distinct host classes", summary["distinct_host_classes"]),
-            ("With weight", summary["with_weight"]),
-            ("With length", summary["with_length"]),
+        stats.title,
+        tuple(
+            (label, _format_summary_value(stats, key))
+            for label, key in stats.summary_labels
         ),
     )
-
-    _render_breakdown(
-        console,
-        "Top host species",
-        "host_species",
-        _top_counts(connection, base_sql, parameters, "host_species"),
-    )
-    _render_breakdown(
-        console,
-        "Top host orders",
-        "host_order",
-        _top_counts(connection, base_sql, parameters, "host_order"),
-    )
-    _render_breakdown(
-        console,
-        "Sex distribution",
-        "sex",
-        _top_counts(connection, base_sql, parameters, "sex", limit=10),
-    )
+    for breakdown in stats.breakdowns:
+        _render_breakdown(
+            console,
+            breakdown.title,
+            breakdown.value_header,
+            breakdown.rows,
+            aggregate_header=breakdown.aggregate_header,
+            aggregate_key=breakdown.aggregate_key,
+        )
 
 
 def _print_summary_lines(
@@ -309,7 +354,7 @@ def _render_breakdown(
     console: Console,
     title: str,
     value_header: str,
-    rows: list[sqlite3.Row],
+    rows: list[sqlite3.Row] | tuple[dict[str, Any], ...],
     *,
     aggregate_header: str | None = None,
     aggregate_key: str | None = None,
@@ -393,6 +438,25 @@ def _fetchall(
     return connection.execute(sql, parameters).fetchall()
 
 
+def _rows_as_dicts(rows: list[sqlite3.Row]) -> tuple[dict[str, Any], ...]:
+    return tuple(dict(row) for row in rows)
+
+
+def _format_summary_value(stats: TargetStats, key: str) -> Any:
+    summary = stats.summary
+    if key == "data_gb_range":
+        return _format_range(summary["avg_data_gb"], summary["min_data_gb"], summary["max_data_gb"])
+    if key == "parent_data_gb_range":
+        return _format_range(summary["avg_data_gb"], summary["min_data_gb"], summary["max_data_gb"])
+    if key == "completeness_range":
+        return _format_range(summary["avg_completeness"], summary["min_completeness"], summary["max_completeness"])
+    if key == "contamination_range":
+        return _format_range(summary["avg_contamination"], summary["min_contamination"], summary["max_contamination"])
+    if key == "total_data_gb":
+        return _format_gb(summary["total_data_gb"])
+    return summary[key]
+
+
 def _format_range(avg_value: Any, min_value: Any, max_value: Any) -> str:
     if avg_value is None:
         return "n/a"
@@ -403,3 +467,4 @@ def _format_gb(value: Any) -> str:
     if value is None:
         return "n/a"
     return f"{value:,.2f}"
+

@@ -1,17 +1,22 @@
 from __future__ import annotations
 
+import atexit
+from contextlib import ExitStack
 from dataclasses import dataclass
 import json
 from functools import lru_cache
+from importlib import resources
 from pathlib import Path
 import re
 import sqlite3
 from typing import Any, Mapping
 
 DEFAULT_QUERY_LIMIT = 50
-PACKAGE_CATALOG_PATH = Path(__file__).resolve().parent / "data" / "ehitk.sqlite"
-REPO_CATALOG_PATH = Path(__file__).resolve().parents[2] / "data" / "ehitk.sqlite"
-CUSTOM_COLUMNS_PATH = Path(__file__).resolve().parent / "data" / "custom_columns.json"
+PACKAGE_DATA = resources.files("ehitk").joinpath("data")
+CATALOG_RESOURCE = PACKAGE_DATA.joinpath("ehitk.sqlite")
+CUSTOM_COLUMNS_RESOURCE = PACKAGE_DATA.joinpath("custom_columns.json")
+_RESOURCE_PATHS = ExitStack()
+atexit.register(_RESOURCE_PATHS.close)
 
 MAGS_WITH_SPECIMEN_SOURCE = """
 (
@@ -371,15 +376,12 @@ QUERY_COLUMN_ALIASES: dict[str, dict[str, str]] = {
 }
 
 
+@lru_cache(maxsize=1)
 def default_catalog_path() -> Path:
-    # Always prefer the packaged catalog that ships with the installed EHItk
-    # version. This ensures `pip install -U ehitk` or a new wheel install picks
-    # up the matching SQLite bundle instead of an unrelated checkout-level file.
-    if PACKAGE_CATALOG_PATH.exists():
-        return PACKAGE_CATALOG_PATH
-    if REPO_CATALOG_PATH.exists():
-        return REPO_CATALOG_PATH
-    return PACKAGE_CATALOG_PATH
+    """Return a filesystem path for the bundled SQLite catalog resource."""
+    if not CATALOG_RESOURCE.is_file():
+        raise FileNotFoundError("Bundled EHItk SQLite catalog resource was not found.")
+    return _RESOURCE_PATHS.enter_context(resources.as_file(CATALOG_RESOURCE))
 
 
 def resolve_catalog_path(catalog_path: str | Path | None = None) -> Path:
@@ -397,7 +399,7 @@ def catalog_path_from_context(ctx: Any, catalog_path: str | Path | None = None) 
 
 @lru_cache(maxsize=1)
 def _custom_query_headers() -> dict[str, dict[str, tuple[str, ...]]]:
-    with CUSTOM_COLUMNS_PATH.open("r", encoding="utf-8") as handle:
+    with CUSTOM_COLUMNS_RESOURCE.open("r", encoding="utf-8") as handle:
         raw = json.load(handle)
     return {
         target: {preset: tuple(columns) for preset, columns in presets.items()}

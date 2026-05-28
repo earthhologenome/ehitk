@@ -1,0 +1,131 @@
+Python API
+==========
+
+EHItk can be used directly from Python through ``ehitk.Database``. The Python
+API uses the same bundled SQLite catalog and filter semantics as the command
+line interface, but returns structured Python objects instead of rendered
+tables.
+
+Basic usage
+-----------
+
+.. code-block:: python
+
+   import ehitk
+
+   with ehitk.Database() as ehidb:
+       mags = ehidb.mags.query(
+           quality="high",
+           host_taxid=562,
+           columns=("mag_id", "quality", "mag_genus", "host_species"),
+       )
+
+   for mag in mags:
+       print(mag.mag_id, mag.quality, mag.mag_genus, mag.host_species)
+
+Use an alternate catalog by passing a path:
+
+.. code-block:: python
+
+   with ehitk.Database("/path/to/another/db.sqlite") as ehidb:
+       specimens = ehidb.specimens.query(host_species="Podarcis muralis", limit=10)
+
+Collections
+-----------
+
+``Database`` exposes one collection per EHI data level:
+
+``ehidb.specimens``
+   Host and specimen metadata.
+
+``ehidb.hologenomes``
+   Shotgun sequencing datasets linked to specimens.
+
+``ehidb.mags``
+   Metagenome-assembled genomes linked to parent hologenomes and specimens.
+
+Each collection supports ``query()``, ``values()``, and ``stats()``. The
+``hologenomes`` and ``mags`` collections also support ``fetch()``.
+
+Query records
+-------------
+
+``query()`` returns typed dataclass records: ``Specimen``, ``Hologenome``, or
+``Mag``. Filters are passed as keyword arguments using the same names as CLI
+options, with underscores instead of hyphens.
+
+.. code-block:: python
+
+   with ehitk.Database() as ehidb:
+       specimens = ehidb.specimens.query(
+           host_lineage="Reptilia",
+           weight_min=10,
+           limit=5,
+       )
+       hologenomes = ehidb.hologenomes.query(
+           country="Denmark",
+           data_min=1.0,
+           columns=("hologenome_id", "country", "data_gb"),
+       )
+       mags = ehidb.mags.query(
+           quality=("high", "medium"),
+           species="Escherichia coli",
+           limit=20,
+       )
+
+Filter values may be strings, numbers, or sequences. Sequence values are treated
+like comma-separated CLI filter values.
+
+Values and stats
+----------------
+
+``values()`` counts distinct field values after applying filters:
+
+.. code-block:: python
+
+   with ehitk.Database() as ehidb:
+       countries = ehidb.hologenomes.values("country", host_lineage="Reptilia")
+
+   for row in countries.rows:
+       print(row.value, row.count)
+
+``stats()`` returns a ``TargetStats`` object with a raw ``summary`` dictionary
+and named breakdown tables:
+
+.. code-block:: python
+
+   with ehitk.Database() as ehidb:
+       stats = ehidb.mags.stats(quality="high")
+
+   print(stats.summary["matched_mags"])
+   for breakdown in stats.breakdowns:
+       print(breakdown.title, breakdown.rows)
+
+Fetching data
+-------------
+
+``fetch()`` is available for hologenomes and MAGs. It can download files
+immediately or write a shell script with ``curl`` commands when ``batch`` is
+provided. The method returns a ``FetchSummary`` object.
+
+.. code-block:: python
+
+   with ehitk.Database() as ehidb:
+       summary = ehidb.mags.fetch(
+           country="Denmark",
+           output_dir="downloads",
+           batch="download-mags.sh",
+       )
+
+   print(summary.matched_count, summary.queued_count, summary.batch_script)
+
+Advanced SQL predicates
+-----------------------
+
+The ``where`` argument accepts the same validated SQL predicate fragments as
+the CLI ``--where`` option:
+
+.. code-block:: python
+
+   with ehitk.Database() as ehidb:
+       mags = ehidb.mags.query(where="completeness >= 95", limit=10)

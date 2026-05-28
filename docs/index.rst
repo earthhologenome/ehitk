@@ -1,7 +1,8 @@
 EHItk documentation
 ====================
 
-The Earth Hologenome Initiative ToolKit (EHItk) is a command-line tool for
+The Earth Hologenome Initiative ToolKit (EHItk) is a Python package and
+command-line tool for
 finding, summarizing, exporting, and downloading EHI specimen, hologenome, and
 metagenome-assembled genome (MAG) records.
 
@@ -14,6 +15,11 @@ EHItk is organized around three data levels:
 Each level uses the same action pattern where possible: ``query`` returns
 matching records, ``values`` counts distinct field values, ``stats`` summarizes
 matching records, and ``fetch`` downloads files for hologenomes and MAGs.
+
+EHItk includes a pytest-based unit test suite in the repository's ``tests/``
+directory. The project is also covered by GitHub Actions continuous integration,
+which runs the tests, builds source and wheel distributions, and performs CLI
+smoke tests across supported Python versions.
 
 Quick example
 -------------
@@ -32,6 +38,7 @@ Contents
 
    installation
    quickstart
+   api
    commands
    specimens
    hologenomes

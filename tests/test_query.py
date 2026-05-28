@@ -1,11 +1,12 @@
+from importlib import resources
 import json
 from pathlib import Path
 import sqlite3
+import zipfile
 
 from ehitk.query import (
-    PACKAGE_CATALOG_PATH,
+    CATALOG_RESOURCE,
     QueryValidationError,
-    REPO_CATALOG_PATH,
     build_filtered_source_query,
     build_query,
     default_catalog_path,
@@ -47,10 +48,33 @@ def test_validate_where_clause_rejects_semicolon() -> None:
     raise AssertionError("Expected QueryValidationError for unsafe SQL")
 
 
-def test_default_catalog_path_prefers_packaged_database() -> None:
-    assert default_catalog_path() == PACKAGE_CATALOG_PATH
-    if REPO_CATALOG_PATH.exists():
-        assert default_catalog_path() != REPO_CATALOG_PATH
+def test_default_catalog_path_resolves_packaged_database_resource() -> None:
+    catalog_path = default_catalog_path()
+
+    assert CATALOG_RESOURCE.is_file()
+    assert catalog_path.name == "ehitk.sqlite"
+    assert catalog_path.is_file()
+
+
+def test_default_catalog_path_handles_zip_resources(tmp_path, monkeypatch) -> None:
+    package_zip = tmp_path / "resource_package.zip"
+    with zipfile.ZipFile(package_zip, "w") as archive:
+        archive.writestr("zip_resource_package/__init__.py", "")
+        archive.writestr("zip_resource_package/data/ehitk.sqlite", b"catalog")
+
+    monkeypatch.syspath_prepend(str(package_zip))
+    zipped_catalog = resources.files("zip_resource_package").joinpath("data", "ehitk.sqlite")
+    monkeypatch.setattr("ehitk.query.CATALOG_RESOURCE", zipped_catalog)
+
+    default_catalog_path.cache_clear()
+    try:
+        catalog_path = default_catalog_path()
+
+        assert catalog_path.name.endswith("ehitk.sqlite")
+        assert catalog_path.is_file()
+        assert catalog_path.read_bytes() == b"catalog"
+    finally:
+        default_catalog_path.cache_clear()
 
 
 def test_build_query_for_hologenomes() -> None:

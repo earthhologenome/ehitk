@@ -1,11 +1,11 @@
 __pycache__/
+.DS_Store
 .pytest_cache/
+.venv-diagrams/
 *.pyc
 *.part
-*.venv-diagrams
 build/
 dist/
 downloads/
 manifest.jsonl
 src/*.egg-info/
-
