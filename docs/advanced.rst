@@ -68,7 +68,7 @@ mutating SQL keywords such as ``DROP``, ``DELETE``, ``INSERT``, ``UPDATE``,
 Alternate catalogs
 ------------------
 
-Use ``--db`` to query a custom SQLite catalog:
+Use ``--db`` to query a custom or pinned SQLite catalog:
 
 .. code-block:: bash
 
@@ -79,4 +79,5 @@ The Python API accepts the same catalog path with
 ``ehitk.Database("/path/to/ehitk.sqlite")``.
 
 This is also how legacy EHI database files from older data releases can be used
-after installing a newer EHItk package.
+after installing a newer EHItk package. Use ``ehitk database`` to confirm which
+catalog path and checksum are active.

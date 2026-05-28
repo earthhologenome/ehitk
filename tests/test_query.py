@@ -390,6 +390,22 @@ def test_headers_for_columns_default_and_all() -> None:
     assert headers_for("mags", columns="url") == ("mag_id", "url")
 
 
+def test_default_mag_headers_include_host_and_mag_taxonomy_context() -> None:
+    assert headers_for("mags") == (
+        "mag_id",
+        "host_taxid",
+        "host_species",
+        "host_genus",
+        "host_family",
+        "quality",
+        "completeness",
+        "contamination",
+        "mag_family",
+        "mag_genus",
+        "mag_species",
+    )
+
+
 def test_headers_for_accepts_legacy_data_alias() -> None:
     assert headers_for("hologenomes", columns="data") == ("data_gb",)
     assert headers_for("mags", columns="data") == ("data_gb",)

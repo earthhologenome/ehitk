@@ -18,10 +18,14 @@
   "mags": {
     "default": [
       "mag_id",
+      "host_taxid",
       "host_species",
+      "host_genus",
+      "host_family",
       "quality",
       "completeness",
       "contamination",
+      "mag_family",
       "mag_genus",
       "mag_species"
     ],

@@ -39,6 +39,8 @@ Contents
    installation
    quickstart
    api
+   database
+   identifiers
    commands
    specimens
    hologenomes

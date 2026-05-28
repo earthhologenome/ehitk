@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from pathlib import Path
 import sqlite3
 
@@ -100,6 +101,40 @@ def main(
         raise typer.Exit()
 
 
+@app.command("database")
+def database(
+    ctx: typer.Context,
+    db: Path | None = typer.Option(
+        None,
+        "--db",
+        help="Path to an alternate SQLite database. Defaults to the bundled database.",
+    ),
+) -> None:
+    """Show the SQLite catalog currently used by EHItk."""
+    catalog_path = (
+        resolve_catalog_path(db) if db is not None else Path(ctx.obj["catalog_path"])
+    )
+    if not catalog_path.exists():
+        raise typer.BadParameter(
+            f"Database does not exist: {catalog_path}",
+            param_hint="--db",
+        )
+    default_path = resolve_catalog_path(None)
+    source = "bundled" if catalog_path == default_path else "custom"
+    details = {
+        "Package version": __version__,
+        "Catalog source": source,
+        "Catalog path": str(catalog_path),
+        "Catalog size": _format_bytes(catalog_path.stat().st_size),
+        "SHA256": _file_sha256(catalog_path),
+    }
+
+    console = Console()
+    console.print("Database Catalog", style="bold")
+    for field, value in details.items():
+        console.print(f"{field}: {value}")
+
+
 def _print_root_overview(database_path: Path) -> None:
     console = Console()
     _print_root_header(console)
@@ -114,6 +149,24 @@ def _print_root_overview(database_path: Path) -> None:
         table.add_row(row["level"], row["records"], row["summary"])
     console.print(table)
     console.print("Use `ehitk --help` to see all commands.")
+
+
+def _file_sha256(path: Path) -> str:
+    checksum = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            checksum.update(chunk)
+    return checksum.hexdigest()
+
+
+def _format_bytes(size: int) -> str:
+    units = ("B", "KB", "MB", "GB")
+    value = float(size)
+    for unit in units:
+        if value < 1024 or unit == units[-1]:
+            return f"{value:.1f} {unit}" if unit != "B" else f"{size} {unit}"
+        value /= 1024
+    return f"{size} B"
 
 
 def _catalog_summary(database_path: Path) -> tuple[dict[str, str], ...]:

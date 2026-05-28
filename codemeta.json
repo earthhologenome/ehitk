@@ -1,0 +1,52 @@
+{
+  "@context": "https://w3id.org/codemeta/3.0",
+  "@type": "SoftwareSourceCode",
+  "@id": "https://github.com/earthhologenome/ehitk",
+  "identifier": "ehitk",
+  "name": "EHItk",
+  "description": "Earth Hologenome Initiative ToolKit: a Python package and command-line tool for finding, summarizing, exporting, and downloading EHI specimens, hologenomes, and metagenome-assembled genomes.",
+  "version": "1.1.3",
+  "datePublished": "2026-05-28",
+  "codeRepository": "https://github.com/earthhologenome/ehitk",
+  "issueTracker": "https://github.com/earthhologenome/ehitk/issues",
+  "url": "https://ehitk.readthedocs.io/",
+  "readme": "https://github.com/earthhologenome/ehitk/blob/main/README.md",
+  "releaseNotes": "https://github.com/earthhologenome/ehitk/blob/main/CHANGELOG.md",
+  "license": "https://spdx.org/licenses/GPL-3.0-only",
+  "programmingLanguage": "Python",
+  "runtimePlatform": "Python >=3.10",
+  "operatingSystem": "OS Independent",
+  "applicationCategory": "Bioinformatics",
+  "developmentStatus": "active",
+  "keywords": [
+    "bioinformatics",
+    "hologenome",
+    "metagenomics",
+    "metadata",
+    "microbiome",
+    "command-line-tool"
+  ],
+  "softwareRequirements": [
+    "Python >=3.10",
+    "requests >=2.31.0",
+    "rich >=13.7.0",
+    "typer >=0.12.0"
+  ],
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Antton",
+      "familyName": "Alberdi",
+      "email": "antton.alberdi@sund.ku.dk"
+    }
+  ],
+  "maintainer": [
+    {
+      "@type": "Person",
+      "givenName": "Antton",
+      "familyName": "Alberdi",
+      "email": "antton.alberdi@sund.ku.dk"
+    }
+  ],
+  "continuousIntegration": "https://github.com/earthhologenome/ehitk/actions"
+}

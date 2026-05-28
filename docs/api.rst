@@ -17,11 +17,25 @@ Basic usage
        mags = ehidb.mags.query(
            quality="high",
            host_taxid=40674,
-           columns=("mag_id", "quality", "mag_genus", "host_species"),
+           columns=(
+               "mag_id",
+               "quality",
+               "mag_family",
+               "mag_genus",
+               "host_taxid",
+               "host_species",
+           ),
        )
 
    for mag in mags:
-       print(mag.mag_id, mag.quality, mag.mag_genus, mag.host_species)
+       print(
+           mag.mag_id,
+           mag.quality,
+           mag.mag_family,
+           mag.mag_genus,
+           mag.host_taxid,
+           mag.host_species,
+       )
 
 Use an alternate catalog by passing a path:
 

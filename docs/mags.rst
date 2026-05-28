@@ -40,6 +40,13 @@ Filters
    identifier filter and includes catalog descendants. MAG taxonomy itself is
    still filtered with ``--genus`` and ``--species``.
 
+Taxonomy output
+   The default MAG query output includes the host NCBI ``host_taxid`` together
+   with host species, genus, and family names, plus MAG family, genus, and
+   species labels. MAG taxonomic labels come from GTDB-style MAG assignments;
+   NCBI taxon identifiers are therefore reported for hosts, but not inferred
+   for MAG taxa.
+
 ``--biome-envo-id``/``--biome`` and ``--biome-name``
    Linked parent-hologenome biome filters. ENVO identifier filters include
    catalog descendants; biome name filters are exact.

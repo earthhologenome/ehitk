@@ -23,6 +23,10 @@ Resources
    specimens. This resource supports ``fields``, ``query``, ``values``,
    ``stats``, and ``fetch``.
 
+``database``
+   Show the SQLite catalog currently used by EHItk, including whether it is the
+   bundled catalog or an alternate catalog passed with ``--db``.
+
 Actions
 -------
 

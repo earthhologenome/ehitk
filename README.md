@@ -4,6 +4,7 @@
 
 [![CI](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml/badge.svg)](https://github.com/earthhologenome/ehitk/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://github.com/earthhologenome/ehitk)
+[![Database DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.20430293.svg)](https://doi.org/10.5281/zenodo.20430293)
 
 # EHItk
 
@@ -39,13 +40,21 @@ with ehitk.Database() as ehidb:
     mags = ehidb.mags.query(quality="high", host_taxid=40674, limit=5)
 
 for mag in mags:
-    print(mag.mag_id, mag.quality, mag.host_species)
+    print(
+        mag.mag_id,
+        mag.quality,
+        mag.host_taxid,
+        mag.host_species,
+        mag.mag_family,
+        mag.mag_genus,
+    )
 ```
 
 ## Documentation
 
-Full installation instructions, command reference, examples, output formats, and
-download guidance, and Python API examples are available at:
+Full installation instructions, command reference, examples, output formats,
+identifier namespaces, download guidance, and Python API examples are available
+at:
 
 https://ehitk.readthedocs.io/
 
@@ -64,10 +73,21 @@ EHItk ships with a bundled SQLite EHI database, which is the default database
 used by the command-line interface and Python API. Updating the Python package
 may therefore also update the default EHI database.
 
-Database updates are paired with documented EHI data releases. Older legacy
-database files are archived with those data releases so analyses can be rerun
-against the same database version by passing the file with `--db` or by opening
-it with `ehitk.Database("/path/to/ehitk.sqlite")`.
+Use `ehitk database` to inspect the catalog currently in use, including its
+path, source, size, and SHA256 checksum.
+
+Database updates are paired with documented EHI data releases. Each release
+produces a standalone `ehitk-database-<version>.sqlite` artifact and checksum
+file for GitHub Releases and Zenodo, while the same SQLite file remains bundled
+inside the matching Python package for convenience. The citable Zenodo database
+record is available at https://doi.org/10.5281/zenodo.20430293. Older database
+files can be used to rerun analyses against the same database version by passing
+the file with `--db` or by opening it with
+`ehitk.Database("/path/to/ehitk.sqlite")`.
+
+The public package does not currently rebuild the full curated EHI metadata
+catalog from upstream sources. Fresh catalogs are obtained by upgrading EHItk or
+by downloading the versioned database artifact for a specific release.
 
 EHItk package versions follow Semantic Versioning for the software interface.
 Database updates that change the SQLite schema, remove or rename fields, or

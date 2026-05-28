@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 from pathlib import Path
 import sys
 
@@ -22,6 +23,24 @@ def test_update_pyproject_version_rewrites_single_version_line() -> None:
     updated = release.update_pyproject_version(content, "1.0.2")
     assert 'version = "1.0.2"' in updated
     assert 'version = "1.0.1"' not in updated
+
+
+def test_update_citation_version_rewrites_release_metadata() -> None:
+    release = _load_release_module()
+    content = 'cff-version: 1.2.0\nversion: "1.0.1"\ndate-released: 2026-03-18\n'
+    updated = release.update_citation_version(content, "1.0.2", "2026-03-19")
+    assert 'version: "1.0.2"' in updated
+    assert "date-released: 2026-03-19" in updated
+    assert 'version: "1.0.1"' not in updated
+
+
+def test_update_codemeta_version_rewrites_release_metadata() -> None:
+    release = _load_release_module()
+    content = '{"name": "EHItk", "version": "1.0.1", "datePublished": "2026-03-18"}'
+    updated = release.update_codemeta_version(content, "1.0.2", "2026-03-19")
+    assert '"version": "1.0.2"' in updated
+    assert '"datePublished": "2026-03-19"' in updated
+    assert updated.endswith("\n")
 
 
 def test_release_changelog_moves_unreleased_section_into_new_version() -> None:
@@ -51,3 +70,22 @@ def test_release_changelog_moves_unreleased_section_into_new_version() -> None:
     assert "- New feature" in updated
     assert "- Important bug fix" in updated
     assert "## [1.0.1] - 2026-03-18" in updated
+
+
+def test_write_database_release_artifacts_copies_catalog_and_checksum(tmp_path) -> None:
+    release = _load_release_module()
+    source_database = tmp_path / "ehitk.sqlite"
+    source_database.write_bytes(b"sqlite catalog")
+    release_dir = tmp_path / "dist"
+
+    release.PACKAGE_DB_PATH = source_database
+    release.DATABASE_RELEASE_DIR = release_dir
+    artifact, checksum_file = release.write_database_release_artifacts("1.2.3")
+
+    expected_checksum = hashlib.sha256(b"sqlite catalog").hexdigest()
+    assert artifact == release_dir / "ehitk-database-1.2.3.sqlite"
+    assert artifact.read_bytes() == b"sqlite catalog"
+    assert checksum_file == release_dir / "ehitk-database-1.2.3.sqlite.sha256"
+    assert checksum_file.read_text(encoding="utf-8") == (
+        f"{expected_checksum}  ehitk-database-1.2.3.sqlite\n"
+    )

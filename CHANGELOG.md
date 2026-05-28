@@ -10,6 +10,30 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.1.3] - 2026-05-28
+
+### Added
+
+- Added `ehitk database` for reporting the active SQLite catalog path, source,
+  size, and SHA256 checksum.
+- Documented standalone database catalog releases, including GitHub/Zenodo
+  archiving, pinned catalog usage, and the relationship between bundled and
+  archived SQLite files.
+- Added release-script generation of versioned SQLite database artifacts and
+  checksum files for separate catalog release deposits.
+- Added `CITATION.cff` and `codemeta.json` software metadata files for
+  repository citation, indexing, and archival reuse.
+- Added the citable Zenodo DOI for standalone EHItk database catalog releases
+  to the README and database documentation.
+- Added a Bioconda recipe for EHItk packaging and downstream BioContainers
+  integration.
+- Documented planned Bioconda installation and BioContainers availability after
+  the recipe is accepted upstream.
+- Added host NCBI taxids and host/MAG family-genus taxonomy context to the
+  default MAG query output.
+- Documented identifier namespaces and manual resolution routes for EHI catalog
+  IDs, NCBI host taxids, ENVO biome IDs, release labels, and download URLs.
+
 ## [1.1.2] - 2026-05-28
 
 ### Added

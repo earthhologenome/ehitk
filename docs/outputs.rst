@@ -63,8 +63,18 @@ Default columns
    ``biome_envo_id``, ``biome_name``, ``data_gb``.
 
 ``mags``
-   ``mag_id``, ``host_species``, ``quality``, ``completeness``,
-   ``contamination``, ``mag_genus``, ``mag_species``.
+   ``mag_id``, ``host_taxid``, ``host_species``, ``host_genus``,
+   ``host_family``, ``quality``, ``completeness``, ``contamination``,
+   ``mag_family``, ``mag_genus``, ``mag_species``.
+
+Identifier namespaces
+---------------------
+
+Identifier columns keep their original namespace. EHI catalog identifiers such
+as ``specimen_id``, ``hologenome_id``, and ``mag_id`` resolve inside the EHItk
+catalog; ``host_taxid`` values resolve in NCBI Taxonomy; and
+``biome_envo_id`` values resolve in ENVO. See :doc:`identifiers` for the full
+field-by-field list and resolver examples.
 
 Value fields and counts
 -----------------------

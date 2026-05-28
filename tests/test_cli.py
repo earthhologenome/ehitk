@@ -1,3 +1,4 @@
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -123,6 +124,23 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
     hologenomes_index = output.index("hologenomes")
     mags_index = output.index("mags")
     assert specimens_index < hologenomes_index < mags_index
+
+
+def test_database_command_reports_active_catalog() -> None:
+    result = runner.invoke(app, ["database"])
+    output = _strip_ansi(result.output)
+    checksum = hashlib.sha256(ROOT_DB_PATH.read_bytes()).hexdigest()
+
+    assert result.exit_code == 0
+    assert "Database Catalog" in output
+    assert "Package version" in output
+    assert __version__ in output
+    assert "Catalog source" in output
+    assert "bundled" in output
+    assert "Catalog path" in output
+    assert str(ROOT_DB_PATH) in output
+    assert "SHA256" in output
+    assert checksum in output
 
 
 def test_entity_help_documents_subcommands() -> None:
