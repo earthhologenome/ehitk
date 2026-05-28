@@ -125,6 +125,35 @@ def test_root_help_shows_db_and_hides_completion_options() -> None:
     assert specimens_index < hologenomes_index < mags_index
 
 
+def test_entity_help_documents_subcommands() -> None:
+    expected = {
+        "specimens": (
+            "List specimen records that match host taxonomy",
+            "Count distinct values for a specimen field",
+            "Summarize the number and composition",
+        ),
+        "hologenomes": (
+            "List hologenome records that match host",
+            "Count distinct values for a hologenome field",
+            "Download matching paired-read files",
+            "data volume of matching",
+        ),
+        "mags": (
+            "List MAG records that match taxonomy",
+            "Count distinct values for a MAG field",
+            "Download matching MAG FASTA files",
+            "quality, taxonomy, and host context",
+        ),
+    }
+
+    for entity, snippets in expected.items():
+        result = runner.invoke(app, [entity, "--help"])
+        output = _strip_ansi(result.output)
+        assert result.exit_code == 0
+        for snippet in snippets:
+            assert snippet in output
+
+
 def test_root_error_usage_shows_same_header() -> None:
     result = runner.invoke(app, ["--bad-option"])
     output = _strip_ansi(result.output)

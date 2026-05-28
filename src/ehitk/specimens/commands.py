@@ -19,7 +19,7 @@ from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 app = typer.Typer(help="Query and summarize specimens.", no_args_is_help=True)
 
 
-@app.command()
+@app.command(help="List specimen records that match host taxonomy, sex, and measurement filters.")
 def query(
     ctx: typer.Context,
     db: Path | None = typer.Option(
@@ -103,7 +103,7 @@ def query(
     )
 
 
-@app.command()
+@app.command(help="Count distinct values for a specimen field after applying filters.")
 def values(
     ctx: typer.Context,
     db: Path | None = typer.Option(
@@ -189,7 +189,7 @@ def values(
     )
 
 
-@app.command()
+@app.command(help="Summarize the number and composition of matching specimen records.")
 def stats(
     ctx: typer.Context,
     db: Path | None = typer.Option(

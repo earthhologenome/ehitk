@@ -23,7 +23,7 @@ from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 app = typer.Typer(help="Query, summarize, and fetch hologenomes.", no_args_is_help=True)
 
 
-@app.command()
+@app.command(help="List hologenome records that match host, sample, geography, and data filters.")
 def query(
     ctx: typer.Context,
     db: Path | None = typer.Option(
@@ -128,7 +128,7 @@ def query(
     )
 
 
-@app.command()
+@app.command(help="Count distinct values for a hologenome field after applying filters.")
 def values(
     ctx: typer.Context,
     db: Path | None = typer.Option(
@@ -235,7 +235,7 @@ def values(
     )
 
 
-@app.command()
+@app.command(help="Download matching paired-read files or write a batch download script.")
 def fetch(
     ctx: typer.Context,
     db: Path | None = typer.Option(
@@ -413,7 +413,7 @@ def fetch(
     _print_fetch_summary(console, results)
 
 
-@app.command()
+@app.command(help="Summarize the number, host composition, and data volume of matching hologenomes.")
 def stats(
     ctx: typer.Context,
     db: Path | None = typer.Option(

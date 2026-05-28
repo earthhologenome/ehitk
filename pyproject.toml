@@ -36,6 +36,8 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
   "Topic :: Utilities",
 ]
@@ -61,7 +63,7 @@ ehitk = "ehitk.cli:app"
 Homepage = "https://github.com/earthhologenome/ehitk"
 Repository = "https://github.com/earthhologenome/ehitk"
 Issues = "https://github.com/earthhologenome/ehitk/issues"
-Documentation = "https://github.com/earthhologenome/ehitk#readme"
+Documentation = "https://ehitk.readthedocs.io/"
 Changelog = "https://github.com/earthhologenome/ehitk/blob/main/CHANGELOG.md"
 
 [tool.setuptools]

@@ -8,7 +8,17 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 ### Added
 
-- No unreleased changes yet.
+- Added Read the Docs documentation with installation, quick-start, command,
+  entity-specific, output, fetch, and advanced usage pages.
+- Added descriptions for entity subcommands so `ehitk specimens --help`,
+  `ehitk hologenomes --help`, and `ehitk mags --help` document their child
+  commands.
+- Extended the GitHub Actions test matrix and package classifiers through Python 3.14.
+
+### Changed
+
+- Reduced the README to a concise project overview with a link to the full
+  Read the Docs documentation.
 
 ## [1.0.6] - 2026-03-23
 
