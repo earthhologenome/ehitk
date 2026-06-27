@@ -7,6 +7,7 @@ import shlex
 from typing import Iterable
 from urllib.parse import urlparse
 import urllib.request
+import zlib
 
 import requests
 from rich.console import Console
@@ -22,6 +23,11 @@ from rich.progress import (
 from ehitk.manifest import ManifestEntry, append_manifest_entry
 
 CHUNK_SIZE = 1024 * 1024
+GZIP_MAGIC = b"\x1f\x8b"
+
+
+class IntegrityError(Exception):
+    """Raised when a downloaded file fails an integrity check."""
 
 
 @dataclass(frozen=True)
@@ -38,7 +44,52 @@ class DownloadResult:
     job: DownloadJob
     status: str
     checksum: str | None = None
+    size: int | None = None
     error: str | None = None
+
+
+class _GzipChecker:
+    """Validate a gzip stream incrementally as chunks are downloaded.
+
+    Feeding every chunk through a streaming decompressor verifies the gzip
+    header, the per-member CRC32, and the uncompressed length recorded in the
+    gzip trailer without buffering the whole file or making a second pass over
+    it. Concatenated (multi-member) gzip files, such as bgzip output, are
+    handled by restarting on the trailing bytes after each member ends.
+    """
+
+    def __init__(self) -> None:
+        self._decompressor: zlib._Decompress | None = None
+        self._in_member = False
+        self._started = False
+
+    def update(self, chunk: bytes) -> None:
+        if not chunk:
+            return
+        self._started = True
+        data = chunk
+        while data:
+            if self._decompressor is None:
+                self._decompressor = zlib.decompressobj(wbits=31)
+            try:
+                self._decompressor.decompress(data, CHUNK_SIZE)
+            except zlib.error as exc:
+                raise IntegrityError(f"gzip integrity check failed: {exc}") from exc
+            self._in_member = True
+            if self._decompressor.eof:
+                data = self._decompressor.unused_data
+                self._decompressor = None
+                self._in_member = False
+            elif self._decompressor.unconsumed_tail:
+                data = self._decompressor.unconsumed_tail
+            else:
+                data = b""
+
+    def finish(self) -> None:
+        if not self._started:
+            raise IntegrityError("downloaded file is empty")
+        if self._in_member:
+            raise IntegrityError("gzip stream is incomplete (truncated download)")
 
 
 def filename_from_url(url: str, *, fallback: str) -> str:
@@ -82,14 +133,16 @@ def download_jobs(
                     url=job.url,
                     path=str(job.destination),
                     checksum=result.checksum,
+                    size=result.size,
                     status=result.status,
                 ),
             )
             results.append(result)
 
             if result.error:
+                label = "Corrupt" if result.status == "corrupt" else "Failed"
                 active_console.print(
-                    f"[red]Failed[/red] {job.destination.name}: {result.error}"
+                    f"[red]{label}[/red] {job.destination.name}: {result.error}"
                 )
 
     return results
@@ -124,14 +177,16 @@ def write_batch_script(
     for job in jobs:
         destination = shlex.quote(str(job.destination))
         url = shlex.quote(job.url)
+        downloading = shlex.quote(f"Downloading {job.destination.name}")
         if overwrite:
-            lines.append(f"echo 'Downloading {job.destination.name}'")
+            lines.append(f"echo {downloading}")
             lines.append(f"curl --fail --location --output {destination} {url}")
         else:
+            skipping = shlex.quote(f"Skipping existing {job.destination.name}")
             lines.append(f"if [ -f {destination} ]; then")
-            lines.append(f"  echo 'Skipping existing {job.destination.name}'")
+            lines.append(f"  echo {skipping}")
             lines.append("else")
-            lines.append(f"  echo 'Downloading {job.destination.name}'")
+            lines.append(f"  echo {downloading}")
             lines.append(f"  curl --fail --location --output {destination} {url}")
             lines.append("fi")
         lines.append("")
@@ -157,36 +212,61 @@ def _download_job(
     if temporary_path.exists():
         temporary_path.unlink()
 
+    expect_gzip = destination.name.endswith(".gz")
     try:
         scheme = urlparse(job.url).scheme.lower()
         if scheme in {"http", "https"}:
-            checksum = _download_http(job, temporary_path, progress)
+            checksum, size = _download_http(
+                job, temporary_path, progress, expect_gzip=expect_gzip
+            )
         elif scheme == "ftp":
-            checksum = _download_ftp(job, temporary_path, progress)
+            checksum, size = _download_ftp(
+                job, temporary_path, progress, expect_gzip=expect_gzip
+            )
         else:
             raise ValueError(f"Unsupported URL scheme: {scheme}")
 
         temporary_path.replace(destination)
-        return DownloadResult(job=job, status="downloaded", checksum=checksum)
+        return DownloadResult(job=job, status="downloaded", checksum=checksum, size=size)
+    except IntegrityError as exc:
+        # Keep the partial file for inspection rather than promoting it to the
+        # final name, so the failed download is visible and easy to re-fetch.
+        return DownloadResult(job=job, status="corrupt", error=str(exc))
     except Exception as exc:  # noqa: BLE001
         if temporary_path.exists():
             temporary_path.unlink()
         return DownloadResult(job=job, status="failed", error=str(exc))
 
 
-def _download_http(job: DownloadJob, temporary_path: Path, progress: Progress) -> str:
+def _download_http(
+    job: DownloadJob,
+    temporary_path: Path,
+    progress: Progress,
+    *,
+    expect_gzip: bool,
+) -> tuple[str, int]:
     with requests.get(job.url, stream=True, timeout=(10, 300)) as response:
         response.raise_for_status()
         total_size = _parse_total_size(response.headers.get("content-length"))
         chunks = response.iter_content(chunk_size=CHUNK_SIZE)
-        return _stream_to_disk(job, chunks, total_size, temporary_path, progress)
+        return _stream_to_disk(
+            job, chunks, total_size, temporary_path, progress, expect_gzip=expect_gzip
+        )
 
 
-def _download_ftp(job: DownloadJob, temporary_path: Path, progress: Progress) -> str:
+def _download_ftp(
+    job: DownloadJob,
+    temporary_path: Path,
+    progress: Progress,
+    *,
+    expect_gzip: bool,
+) -> tuple[str, int]:
     with urllib.request.urlopen(job.url, timeout=300) as response:
         total_size = _parse_total_size(getattr(response, "length", None))
         chunks = iter(lambda: response.read(CHUNK_SIZE), b"")
-        return _stream_to_disk(job, chunks, total_size, temporary_path, progress)
+        return _stream_to_disk(
+            job, chunks, total_size, temporary_path, progress, expect_gzip=expect_gzip
+        )
 
 
 def _stream_to_disk(
@@ -195,8 +275,12 @@ def _stream_to_disk(
     total_size: int | None,
     temporary_path: Path,
     progress: Progress,
-) -> str:
+    *,
+    expect_gzip: bool,
+) -> tuple[str, int]:
     checksum = hashlib.sha256()
+    gzip_checker = _GzipChecker() if expect_gzip else None
+    bytes_written = 0
     task_id = progress.add_task("download", filename=job.destination.name, total=total_size)
 
     try:
@@ -206,11 +290,22 @@ def _stream_to_disk(
                     continue
                 handle.write(chunk)
                 checksum.update(chunk)
+                if gzip_checker is not None:
+                    gzip_checker.update(chunk)
+                bytes_written += len(chunk)
                 progress.update(task_id, advance=len(chunk))
     finally:
         progress.remove_task(task_id)
 
-    return checksum.hexdigest()
+    if total_size is not None and bytes_written != total_size:
+        raise IntegrityError(
+            f"size mismatch: server reported {total_size} bytes but {bytes_written} "
+            "were received (truncated download)"
+        )
+    if gzip_checker is not None:
+        gzip_checker.finish()
+
+    return checksum.hexdigest(), bytes_written
 
 
 def _parse_total_size(raw_value: object) -> int | None:

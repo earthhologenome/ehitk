@@ -34,6 +34,19 @@ record is available at https://doi.org/10.5281/zenodo.20430293, with the current
 record page at https://zenodo.org/records/20430294. The same SQLite file is also
 included inside the matching EHItk Python package for convenience.
 
+Embedded descendant hierarchy
+-----------------------------
+
+ENVO biome and NCBI host-taxon filters expand to include catalog descendants.
+The descendant maps that drive this expansion are stored as two auxiliary tables
+inside the SQLite catalog itself, ``envo_descendants`` and
+``host_taxon_descendants`` (each with ``ancestor`` and ``descendant`` columns).
+Keeping the hierarchy in the same file as the data it describes guarantees that a
+pinned or custom catalog used via ``--db`` always expands filters with its own
+ENVO and taxonomy snapshot, rather than with whatever metadata happens to ship
+with the installed package. When a catalog predates these tables, EHItk falls
+back to the descendant maps bundled with the package.
+
 Use a pinned catalog with the global ``--db`` option:
 
 .. code-block:: bash

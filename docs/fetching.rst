@@ -197,6 +197,29 @@ Fetch options
 ``--limit N``
    Limit the number of matching records to fetch.
 
+Integrity validation
+--------------------
+
+The EHI catalog distributes download URLs but does not currently distribute a
+checksum or file size for each remote resource, so a fetched file cannot be
+compared against an authoritative reference value. To still detect downloads
+that were corrupted or truncated in transit, EHItk validates every file it
+downloads itself:
+
+- **Size check.** When the server reports a ``Content-Length`` (HTTP) or
+  declared length (FTP), EHItk verifies that the number of bytes received
+  matches it. A mismatch indicates a truncated or interrupted download.
+- **Gzip integrity check.** Files with a ``.gz`` extension (all distributed
+  hologenome reads and MAG FASTA files are gzip-compressed) are streamed through
+  a gzip decompressor as they download. This verifies the gzip header, the
+  per-member CRC-32, and the uncompressed length stored in the gzip trailer,
+  catching bit-level corruption without a second pass over the file.
+
+Both checks run on the streamed data, so they add no extra network transfer.
+A file that fails either check is **not** promoted to its final name: the
+partial download is left in place with a ``.part`` suffix for inspection, the
+manifest records a ``corrupt`` status, and the file can simply be re-fetched.
+
 Download manifest
 -----------------
 
@@ -212,10 +235,14 @@ Every immediate fetch attempt appends one JSON object per file to
      "url": null,
      "path": null,
      "checksum": null,
+     "bytes": null,
      "status": "missing_url"
    }
 
 Hologenome entries use ``hologenome_id``. MAG entries use ``mag_id``.
 
 Possible statuses include ``downloaded``, ``skipped_existing``, ``missing_url``,
-and ``failed``. Checksums are SHA-256 digests of downloaded files.
+``corrupt``, and ``failed``. Checksums are SHA-256 digests of downloaded files,
+and ``bytes`` records the size of the downloaded file. Recording the observed
+size and checksum in the manifest provides a per-file integrity record that can
+be used to compare or reproduce downloads across runs.

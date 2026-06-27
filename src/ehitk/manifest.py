@@ -15,14 +15,16 @@ class ManifestEntry:
     path: str | None
     checksum: str | None
     status: str
+    size: int | None = None
 
-    def as_dict(self) -> dict[str, str | None]:
-        payload: dict[str, str | None] = {
+    def as_dict(self) -> dict[str, str | int | None]:
+        payload: dict[str, str | int | None] = {
             "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "type": self.entry_type,
             "url": self.url,
             "path": self.path,
             "checksum": self.checksum,
+            "bytes": self.size,
             "status": self.status,
         }
         payload[self.id_field] = self.id_value

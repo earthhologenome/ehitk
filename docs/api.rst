@@ -137,6 +137,50 @@ provided. The method returns a ``FetchSummary`` object.
 
    print(summary.matched_count, summary.queued_count, summary.batch_script)
 
+Working with pandas
+-------------------
+
+Because ``query()`` returns lists of dataclass records, the results drop
+straight into a `pandas <https://pandas.pydata.org/>`_ ``DataFrame`` with no
+conversion code: ``pandas.DataFrame`` understands a list of dataclasses and
+turns each field into a column.
+
+.. code-block:: python
+
+   import ehitk
+   import pandas as pd
+
+   with ehitk.Database() as ehidb:
+       mags = ehidb.mags.query(quality="high", host_taxid=40674)
+
+   frame = pd.DataFrame(mags)
+   print(frame[["mag_id", "quality", "completeness", "mag_genus"]].head())
+
+The same pattern works for the ``rows`` of a ``values()`` result and for the
+``rows`` of each ``stats()`` breakdown:
+
+.. code-block:: python
+
+   with ehitk.Database() as ehidb:
+       countries = ehidb.hologenomes.values("country", host_lineage="Reptilia")
+       stats = ehidb.mags.stats(quality="high")
+
+   country_counts = pd.DataFrame(countries.rows)            # columns: value, count
+   quality_breakdown = pd.DataFrame(stats.breakdowns[0].rows)
+
+A few notes:
+
+* A record carries every field of its dataclass even when you restrict the
+  query with ``columns``; the columns you did not request are present in the
+  ``DataFrame`` with ``None`` values. Subset the frame afterwards (for example
+  ``frame[list(columns)]``) when you want only the requested columns.
+* The ``weight`` and ``length`` specimen measurements are tuples of values, so
+  they appear as object-dtype columns holding Python tuples. Use
+  ``frame.explode("weight")`` if you need one row per measurement.
+
+``pandas`` is not a dependency of EHItk; install it separately (``pip install
+pandas``) to use these examples.
+
 Advanced SQL predicates
 -----------------------
 

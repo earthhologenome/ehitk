@@ -34,6 +34,7 @@ def value_rows(
         target,
         filters=filters,
         where=where,
+        catalog_path=resolved_catalog,
     )
 
     if is_json_array:

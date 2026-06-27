@@ -21,6 +21,19 @@ END
 
 @dataclass(frozen=True, slots=True)
 class StatBreakdown:
+    """A single named breakdown table within a :class:`TargetStats` result.
+
+    A breakdown groups matching records by some field (for example country or
+    host class) and reports a count, optionally alongside an aggregate column.
+
+    Attributes:
+        title: Human-readable breakdown title.
+        value_header: Header label for the grouping value column.
+        rows: Breakdown rows as dictionaries keyed by column name.
+        aggregate_header: Header label for the aggregate column, if any.
+        aggregate_key: Row key holding the aggregate value, if any.
+    """
+
     title: str
     value_header: str
     rows: tuple[dict[str, Any], ...]
@@ -30,6 +43,24 @@ class StatBreakdown:
 
 @dataclass(frozen=True, slots=True)
 class TargetStats:
+    """Summary statistics for a queried data level.
+
+    Returned by the ``stats()`` method of every collection. Combines a raw
+    ``summary`` dictionary (used to render the headline figures) with a set of
+    grouped :class:`StatBreakdown` tables.
+
+    Attributes:
+        target: The data level the stats describe (``"specimens"``,
+            ``"hologenomes"``, or ``"mags"``).
+        title: Human-readable title for the statistics block.
+        summary: Raw summary metrics keyed by name (for example
+            ``"matched_mags"``).
+        summary_labels: Ordered ``(key, label)`` pairs describing how to
+            present the summary metrics.
+        breakdowns: Named breakdown tables for this target.
+        empty_message: Message to show when no records matched, if any.
+    """
+
     target: str
     title: str
     summary: dict[str, Any]
@@ -50,6 +81,7 @@ def target_stats(
         target,
         filters=filters,
         where=where,
+        catalog_path=resolved_catalog,
     )
 
     with sqlite3.connect(resolved_catalog) as connection:

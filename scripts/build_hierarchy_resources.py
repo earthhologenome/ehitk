@@ -39,6 +39,11 @@ def main() -> None:
     write_json(args.output_dir / "envo_descendants.json", envo_descendants)
     write_json(args.output_dir / "host_taxon_descendants.json", host_taxon_descendants)
 
+    # Embed the same maps as auxiliary tables in the catalog so the descendant
+    # hierarchy always travels with, and stays in sync with, the SQLite snapshot
+    # it describes (including pinned or custom databases used via ``--db``).
+    write_descendant_tables(args.catalog, envo_descendants, host_taxon_descendants)
+
     print(
         f"Wrote {len(envo_descendants)} ENVO ancestor entries for "
         f"{len(observed_envo)} observed ENVO IDs."
@@ -46,6 +51,9 @@ def main() -> None:
     print(
         f"Wrote {len(host_taxon_descendants)} NCBI ancestor entries for "
         f"{len(observed_taxids)} observed host taxids."
+    )
+    print(
+        f"Embedded envo_descendants and host_taxon_descendants tables into {args.catalog}."
     )
 
 
@@ -158,6 +166,41 @@ def chunked(values: list[str], size: int) -> list[list[str]]:
 
 def natural_taxid_key(value: str) -> tuple[int, int | str]:
     return (0, int(value)) if value.isdigit() else (1, value)
+
+
+def write_descendant_tables(
+    catalog: Path,
+    envo_descendants: dict[str, list[str]],
+    host_taxon_descendants: dict[str, list[str]],
+) -> None:
+    with sqlite3.connect(catalog) as connection:
+        _write_descendant_table(connection, "envo_descendants", envo_descendants)
+        _write_descendant_table(
+            connection, "host_taxon_descendants", host_taxon_descendants
+        )
+        connection.commit()
+
+
+def _write_descendant_table(
+    connection: sqlite3.Connection,
+    table: str,
+    mapping: dict[str, list[str]],
+) -> None:
+    connection.execute(f'DROP TABLE IF EXISTS "{table}"')
+    connection.execute(
+        f'CREATE TABLE "{table}" (ancestor TEXT NOT NULL, descendant TEXT NOT NULL)'
+    )
+    connection.executemany(
+        f'INSERT INTO "{table}" (ancestor, descendant) VALUES (?, ?)',
+        [
+            (ancestor, descendant)
+            for ancestor, descendants in mapping.items()
+            for descendant in descendants
+        ],
+    )
+    connection.execute(
+        f'CREATE INDEX "idx_{table}_ancestor" ON "{table}" (ancestor)'
+    )
 
 
 def write_json(path: Path, payload: dict[str, list[str]]) -> None:

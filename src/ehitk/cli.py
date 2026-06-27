@@ -8,7 +8,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 import typer
-from typer.core import HAS_RICH, TyperGroup
+from typer.core import TyperGroup
 
 from ehitk import __version__
 from ehitk.mags.commands import app as mags_app
@@ -22,7 +22,7 @@ ROOT_DESCRIPTION = "Query, summarize, and fetch specimens, hologenomes, and MAGs
 
 class RootHeaderGroup(TyperGroup):
     def format_help(self, ctx, formatter) -> None:
-        if HAS_RICH and self.rich_markup_mode is not None:
+        if self.rich_markup_mode is not None:
             from typer import rich_utils
 
             console = rich_utils._get_rich_console()
@@ -50,19 +50,20 @@ app.add_typer(specimens_app, name="specimens")
 app.add_typer(hologenomes_app, name="hologenomes")
 app.add_typer(mags_app, name="mags")
 
-if HAS_RICH:
-    from typer import rich_utils
+from typer import rich_utils
 
-    _ORIGINAL_RICH_FORMAT_ERROR = rich_utils.rich_format_error
+_ORIGINAL_RICH_FORMAT_ERROR = rich_utils.rich_format_error
 
-    def _rich_format_error_with_root_header(self) -> None:
-        ctx = getattr(self, "ctx", None)
-        if ctx is not None and isinstance(ctx.find_root().command, RootHeaderGroup):
-            _print_root_header(Console(stderr=True))
-            Console(stderr=True).print()
-        _ORIGINAL_RICH_FORMAT_ERROR(self)
 
-    rich_utils.rich_format_error = _rich_format_error_with_root_header
+def _rich_format_error_with_root_header(self) -> None:
+    ctx = getattr(self, "ctx", None)
+    if ctx is not None and isinstance(ctx.find_root().command, RootHeaderGroup):
+        _print_root_header(Console(stderr=True))
+        Console(stderr=True).print()
+    _ORIGINAL_RICH_FORMAT_ERROR(self)
+
+
+rich_utils.rich_format_error = _rich_format_error_with_root_header
 
 
 def _version_callback(value: bool) -> None:

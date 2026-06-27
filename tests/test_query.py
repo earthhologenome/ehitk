@@ -232,6 +232,95 @@ def test_query_rows_expands_host_taxid_descendants() -> None:
     assert any(str(row["host_taxid"]).strip() != "8509" for row in rows)
 
 
+def test_bundled_catalog_includes_descendant_tables() -> None:
+    with sqlite3.connect(default_catalog_path()) as connection:
+        tables = {
+            row[0]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+    assert {"envo_descendants", "host_taxon_descendants"} <= tables
+
+
+def _make_descendant_catalog(path: Path, table: str, rows: list[tuple[str, str]]) -> None:
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            f'CREATE TABLE "{table}" (ancestor TEXT NOT NULL, descendant TEXT NOT NULL)'
+        )
+        connection.executemany(
+            f'INSERT INTO "{table}" (ancestor, descendant) VALUES (?, ?)', rows
+        )
+        connection.commit()
+
+
+def test_build_conditions_uses_embedded_host_taxon_descendants(tmp_path) -> None:
+    catalog = tmp_path / "custom.sqlite"
+    _make_descendant_catalog(
+        catalog,
+        "host_taxon_descendants",
+        [("9999", "9999"), ("9999", "12345"), ("9999", "67890")],
+    )
+
+    _, params = build_filtered_source_query(
+        "specimens",
+        filters={"host_taxid": "9999"},
+        catalog_path=catalog,
+    )
+
+    assert {"9999", "12345", "67890"} <= set(params)
+
+
+def test_build_conditions_uses_embedded_envo_descendants(tmp_path) -> None:
+    catalog = tmp_path / "custom_envo.sqlite"
+    _make_descendant_catalog(
+        catalog,
+        "envo_descendants",
+        [("ENVO:99999999", "ENVO:99999999"), ("ENVO:99999999", "ENVO:11111111")],
+    )
+
+    _, params = build_filtered_source_query(
+        "hologenomes",
+        filters={"biome_envo_id": "ENVO:99999999"},
+        catalog_path=catalog,
+    )
+
+    assert {"ENVO:99999999", "ENVO:11111111"} <= set(params)
+
+
+def test_embedded_tables_override_bundled_json(tmp_path) -> None:
+    # The catalog's own table maps 8509 to itself only; the bundled JSON would
+    # expand it to several Squamata taxids. The catalog must win.
+    catalog = tmp_path / "override.sqlite"
+    _make_descendant_catalog(catalog, "host_taxon_descendants", [("8509", "8509")])
+
+    _, params = build_filtered_source_query(
+        "specimens",
+        filters={"host_taxid": "8509"},
+        catalog_path=catalog,
+    )
+
+    assert params == ["8509"]
+
+
+def test_build_conditions_falls_back_to_bundled_json(tmp_path) -> None:
+    catalog = tmp_path / "no_tables.sqlite"
+    with sqlite3.connect(catalog) as connection:
+        connection.execute("CREATE TABLE specimens (specimen_id TEXT)")
+        connection.commit()
+
+    _, params = build_filtered_source_query(
+        "specimens",
+        filters={"host_taxid": "8509"},
+        catalog_path=catalog,
+    )
+
+    # 8509 expands to multiple Squamata taxids via the bundled JSON resource,
+    # confirming the fallback is used when the catalog lacks the tables.
+    assert params != ["8509"]
+    assert len(params) > 1
+
+
 def test_query_rows_filters_mags_by_biome_envo_descendants() -> None:
     rows = query_rows(
         default_catalog_path(),

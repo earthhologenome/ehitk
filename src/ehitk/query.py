@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+from collections import defaultdict
 from contextlib import ExitStack
 from dataclasses import dataclass
 import json
@@ -17,6 +18,8 @@ CATALOG_RESOURCE = PACKAGE_DATA.joinpath("ehitk.sqlite")
 CUSTOM_COLUMNS_RESOURCE = PACKAGE_DATA.joinpath("custom_columns.json")
 ENVO_DESCENDANTS_RESOURCE = PACKAGE_DATA.joinpath("envo_descendants.json")
 HOST_TAXON_DESCENDANTS_RESOURCE = PACKAGE_DATA.joinpath("host_taxon_descendants.json")
+ENVO_DESCENDANTS_TABLE = "envo_descendants"
+HOST_TAXON_DESCENDANTS_TABLE = "host_taxon_descendants"
 _RESOURCE_PATHS = ExitStack()
 atexit.register(_RESOURCE_PATHS.close)
 
@@ -438,6 +441,54 @@ def _host_taxon_descendants() -> dict[str, tuple[str, ...]]:
     return _load_descendant_resource(HOST_TAXON_DESCENDANTS_RESOURCE)
 
 
+@lru_cache(maxsize=None)
+def _catalog_descendant_table(catalog_path: Path, table: str) -> dict[str, tuple[str, ...]] | None:
+    """Load a descendants map embedded in the catalog, or ``None`` if absent.
+
+    Storing the ENVO and host-taxonomy descendant maps as auxiliary tables in
+    the SQLite catalog keeps that hierarchy in sync with the snapshot it
+    describes. A pinned or custom database therefore expands filters using its
+    own descendants rather than whatever metadata happens to ship with the
+    installed package. When the tables are missing (older snapshots) the caller
+    falls back to the package-bundled JSON resources.
+    """
+    try:
+        connection = sqlite3.connect(f"file:{catalog_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return None
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+            (table,),
+        ).fetchone()
+        if exists is None:
+            return None
+        rows = connection.execute(
+            f'SELECT ancestor, descendant FROM "{table}" ORDER BY rowid'
+        ).fetchall()
+    except sqlite3.Error:
+        return None
+    finally:
+        connection.close()
+
+    mapping: dict[str, list[str]] = defaultdict(list)
+    for ancestor, descendant in rows:
+        mapping[str(ancestor)].append(str(descendant))
+    return {key: tuple(values) for key, values in mapping.items()}
+
+
+def _resolve_descendants(
+    catalog_path: str | Path | None,
+    table: str,
+    fallback: Any,
+) -> dict[str, tuple[str, ...]]:
+    if catalog_path is not None:
+        embedded = _catalog_descendant_table(Path(catalog_path), table)
+        if embedded is not None:
+            return embedded
+    return fallback()
+
+
 def headers_for(
     target: str,
     *,
@@ -640,7 +691,12 @@ def validate_where_clause(where: str | None) -> str | None:
     return candidate
 
 
-def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str], list[Any]]:
+def _build_conditions(
+    target: str,
+    filters: Mapping[str, Any],
+    *,
+    catalog_path: str | Path | None = None,
+) -> tuple[list[str], list[Any]]:
     conditions: list[str] = []
     parameters: list[Any] = []
 
@@ -713,11 +769,16 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         parameters.extend(range_parameters)
 
     def add_host_taxonomy_filters() -> None:
-        add_descendant_exact(
-            "TRIM(host_taxid)",
-            filters.get("host_taxid"),
-            _host_taxon_descendants(),
-        )
+        if _split_filter_values(filters.get("host_taxid")):
+            add_descendant_exact(
+                "TRIM(host_taxid)",
+                filters.get("host_taxid"),
+                _resolve_descendants(
+                    catalog_path,
+                    HOST_TAXON_DESCENDANTS_TABLE,
+                    _host_taxon_descendants,
+                ),
+            )
         add_exact("host_species", filters.get("host_species"))
 
         host_lineage_values = _split_filter_values(filters.get("host_lineage"))
@@ -756,12 +817,17 @@ def _build_conditions(target: str, filters: Mapping[str, Any]) -> tuple[list[str
         if biome_name is None:
             biome_name = _combine_filter_values(None, biome_alias_name_values)
 
-        add_descendant_exact(
-            "TRIM(biome_envo_id)",
-            biome_envo_id,
-            _envo_descendants(),
-            normalize_key=str.upper,
-        )
+        if _split_filter_values(biome_envo_id):
+            add_descendant_exact(
+                "TRIM(biome_envo_id)",
+                biome_envo_id,
+                _resolve_descendants(
+                    catalog_path,
+                    ENVO_DESCENDANTS_TABLE,
+                    _envo_descendants,
+                ),
+                normalize_key=str.upper,
+            )
         add_exact("biome_name", biome_name)
 
     if target == "hologenomes":
@@ -814,6 +880,7 @@ def build_query(
     limit: int | None = None,
     fetch: bool = False,
     columns: str | None = None,
+    catalog_path: str | Path | None = None,
 ) -> tuple[str, list[Any]]:
     if target not in TARGETS:
         raise QueryValidationError(f"Unsupported query target: {target}.")
@@ -828,6 +895,7 @@ def build_query(
         target,
         filters=filters,
         where=where,
+        catalog_path=catalog_path,
     )
 
     sql = f"SELECT {', '.join(selected_columns)} FROM ({base_sql}) AS filtered"
@@ -847,12 +915,15 @@ def build_filtered_source_query(
     *,
     filters: Mapping[str, Any] | None = None,
     where: str | None = None,
+    catalog_path: str | Path | None = None,
 ) -> tuple[str, list[Any]]:
     if target not in TARGETS:
         raise QueryValidationError(f"Unsupported query target: {target}.")
 
     config = TARGETS[target]
-    conditions, parameters = _build_conditions(target, filters or {})
+    conditions, parameters = _build_conditions(
+        target, filters or {}, catalog_path=catalog_path
+    )
 
     safe_where = validate_where_clause(where)
     if safe_where:
@@ -883,6 +954,7 @@ def query_rows(
         limit=limit,
         fetch=fetch,
         columns=columns,
+        catalog_path=resolved_catalog,
     )
 
     with sqlite3.connect(resolved_catalog) as connection:

@@ -10,6 +10,43 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.2.0] - 2026-06-27
+
+### Fixed
+
+- Fixed shell quoting of the progress messages in the batch download scripts
+  written by `hologenomes fetch --batch` and `mags fetch --batch`. The `echo`
+  lines interpolated the file name inside literal single quotes without
+  escaping, so a name containing a single quote produced a syntactically broken
+  script and, in principle, allowed arbitrary shell command injection. The
+  message text is now escaped with `shlex.quote`, matching the already-correct
+  handling of the `mkdir`, existence-check, and `curl` lines.
+
+### Added
+
+- Documented how the typed dataclass records returned by the Python API
+  (`query()`, `values().rows`, and `stats()` breakdown rows) convert directly
+  into a pandas `DataFrame` with no glue code, in the Python API guide.
+- Added comprehensive docstrings across the public Python API (the `Database`
+  entry point, the per-level collections, and the typed record and result
+  dataclasses), improving inline `help()` and IDE documentation.
+- Added download integrity validation to `hologenomes fetch` and `mags fetch`:
+  downloaded files are checked against the server-reported size (detecting
+  truncated downloads) and, for gzip-compressed files, validated with a
+  streaming gzip integrity check (header, CRC-32, and trailer length). Files
+  that fail validation are left with a `.part` suffix and recorded with a
+  `corrupt` status instead of being promoted to their final name.
+- Added the downloaded file size as a `bytes` field in the download manifest,
+  alongside the existing SHA-256 `checksum`, to provide a per-file integrity
+  record for reproducing and comparing downloads.
+- Embedded the ENVO and NCBI host-taxon descendant maps as `envo_descendants`
+  and `host_taxon_descendants` auxiliary tables inside the SQLite catalog, so a
+  pinned or custom catalog used via `--db` expands biome and host-taxon filters
+  with its own hierarchy instead of the package-bundled metadata. EHItk reads the
+  descendants from the catalog in use and falls back to the bundled JSON
+  resources for older catalogs that predate the tables. The build script now
+  writes these tables alongside the existing JSON resources.
+
 ## [1.1.3] - 2026-05-28
 
 ### Added
