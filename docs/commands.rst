@@ -24,8 +24,10 @@ Resources
    ``stats``, and ``fetch``.
 
 ``database``
-   Show the SQLite catalog currently used by EHItk, including whether it is the
-   bundled catalog or an alternate catalog passed with ``--db``.
+   Show the SQLite catalog currently used by EHItk: whether it is the bundled
+   catalog or an alternate catalog passed with ``--db``, its path, size, SHA256
+   checksum, and its ``data_version`` / ``schema_version`` (``unknown`` for older
+   catalogs built before this metadata existed).
 
 Actions
 -------

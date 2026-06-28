@@ -74,7 +74,10 @@ used by the command-line interface and Python API. Updating the Python package
 may therefore also update the default EHI database.
 
 Use `ehitk database` to inspect the catalog currently in use, including its
-path, source, size, and SHA256 checksum.
+path, source, size, SHA256 checksum, and its `data_version` / `schema_version`
+(`unknown` for older catalogs built before this metadata existed). EHItk
+validates `schema_version` when it opens a catalog and reports a clear error if
+the catalog is too new or too old for the installed package.
 
 Database updates are paired with documented EHI data releases. Each release
 produces a standalone `ehitk-database-<data_version>.sqlite` artifact and
@@ -95,16 +98,18 @@ _No published database versions found._
 <!-- db-list-end -->
 
 
-The public package does not currently rebuild the full curated EHI metadata
-catalog from upstream sources. Fresh catalogs are obtained by upgrading EHItk or
-by downloading the versioned database artifact for a specific release.
+The public package does not rebuild the curated EHI metadata catalog from
+upstream sources; that is done by the separate
+[`ehitk-build`](https://github.com/earthhologenome/ehitk-build) generator, which
+publishes each catalog to Zenodo. Fresh catalogs are obtained by upgrading EHItk
+or by downloading a versioned database artifact.
 
 EHItk package versions follow Semantic Versioning for the software interface.
-Database updates that change the SQLite schema, remove or rename fields, or
-otherwise alter command-line or Python API output compatibility are treated as
-breaking changes and require a major version bump. Non-breaking database
-additions or metadata corrections are released as minor or patch versions and
-are documented in the changelog and associated data release notes.
+Database updates that break the SQLite schema contract bump the catalog's
+`schema_version` and require a coordinated (major) EHItk release; non-breaking
+database additions or metadata corrections bump the `data_version` only and are
+released as minor or patch versions. All are documented in the changelog and
+associated data release notes.
 
 ## Testing and continuous integration
 

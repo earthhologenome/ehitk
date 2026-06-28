@@ -77,16 +77,19 @@ The Python API accepts the same path:
 Catalog provenance
 ------------------
 
-The SQLite catalog is a curated EHI metadata product prepared during EHItk
-release preparation. The source tree contains the current bundled snapshot at
-``src/ehitk/data/ehitk.sqlite`` so source builds and editable installs behave
-like packaged installs. Historical catalog snapshots should be obtained from
-the versioned release artifacts rather than from old source checkouts.
+The SQLite catalog is a curated EHI metadata product built by the separate
+``ehitk-build`` generator and published to Zenodo. During EHItk release
+preparation the bundled snapshot at ``src/ehitk/data/ehitk.sqlite`` is fetched
+from the published Zenodo record (verified against its checksum and its
+``schema_version``), so the file shipped in the package is a specific, citable
+data release. That snapshot is committed to the source tree so source builds and
+editable installs behave like packaged installs. Historical catalog snapshots
+should be obtained from the versioned release artifacts (see the table above)
+rather than from old source checkouts.
 
-The public EHItk package does not currently provide an end-user command that
-rebuilds the full curated catalog from upstream metadata sources. Fresh
-catalogs are made available through EHItk package releases and the separate
-database release artifacts.
+The public EHItk package does not provide an end-user command that rebuilds the
+curated catalog from upstream metadata sources. Fresh catalogs are made available
+through EHItk package releases and the separate Zenodo database releases.
 
 Versioning policy
 -----------------
