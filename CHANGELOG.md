@@ -10,6 +10,29 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 - No unreleased changes yet.
 
+## [1.2.1] - 2026-06-28
+
+### Added
+
+- `ehitk database` now reports the catalog's `data_version` and `schema_version`
+  from the embedded `catalog_meta` provenance table, so any install
+  self-identifies exactly which data snapshot it ships.
+- `ehitk` now validates a catalog's `schema_version` when opening it and raises a
+  clear `UnsupportedSchemaVersionError` (exported from the public API) when the
+  catalog is newer than the installed code can read, instead of failing later
+  with an opaque error.
+- Software releases are now archived to Zenodo automatically: each tagged release
+  creates a GitHub Release that the Zenodo–GitHub integration deposits under a
+  software concept DOI, with metadata (including the author ORCID) supplied by a
+  new `.zenodo.json`.
+
+### Changed
+
+- The bundled catalog is now fetched from the published Zenodo record at release
+  time rather than copied from a local build, so the snapshot shipped in the
+  wheel is always a citable, checksum- and schema-verified record. The published
+  database-version list in the README and docs is refreshed automatically.
+
 ## [1.2.0] - 2026-06-27
 
 ### Fixed

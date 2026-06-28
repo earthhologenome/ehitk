@@ -178,12 +178,29 @@ git push origin main
 git push origin v<ehitk_version>
 ```
 
-### 9. PyPI publish (automatic)
+### 9. PyPI publish + Zenodo archival (automatic)
 
 Pushing the `v*` tag triggers `.github/workflows/release.yml`: it verifies the
 packaged catalog is present, runs the tests, builds, validates, smoke-tests the
-wheel, and publishes to PyPI via Trusted Publishing. Confirm the run is green and
-the new version appears on PyPI.
+wheel, and publishes to PyPI via Trusted Publishing. After PyPI succeeds, the
+`github-release` job creates a GitHub Release (attaching the wheel/sdist).
+
+The GitHub Release is what archives the **software** to Zenodo: the
+[Zenodo–GitHub integration](https://zenodo.org/account/settings/github/) watches
+`earthhologenome/ehitk` and, on each new GitHub Release, deposits a new version
+under the **software** concept DOI and mints a per-version DOI. Release metadata
+comes from [`.zenodo.json`](.zenodo.json). This is a *separate* concept from the
+**database** concept DOI ([`10.5281/zenodo.20430293`](https://doi.org/10.5281/zenodo.20430293))
+that `ehitk-build` deposits in step 4.
+
+Confirm the run is green, the new version appears on PyPI, and the new version
+shows up on the software Zenodo record.
+
+> **One-time setup (must happen before the first tag you want archived):** log in
+> at <https://zenodo.org/account/settings/github/>, find `earthhologenome/ehitk`,
+> and flip the toggle **On**. Zenodo only archives Releases created *after* the
+> webhook is enabled. After the first archived release, add the concept-DOI badge
+> to the README and the DOI to `CITATION.cff` / `codemeta.json`.
 
 ---
 

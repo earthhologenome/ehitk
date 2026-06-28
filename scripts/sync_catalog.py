@@ -126,9 +126,11 @@ def fetch_and_embed(
         if progress is not None:
             progress(message)
 
+    # Zenodo caps unauthenticated page size at 25; sort newest-first so the
+    # latest published version is always on the first page.
     records_url = (
         f"{zenodo_url.rstrip('/')}/api/records"
-        f"?q=conceptrecid:{concept_recid}&all_versions=true&size=100"
+        f"?q=conceptrecid:{concept_recid}&all_versions=true&size=25&sort=mostrecent"
     )
     records = fetch_json(records_url)
     record = select_record(records, data_version)

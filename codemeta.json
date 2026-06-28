@@ -5,8 +5,8 @@
   "identifier": "ehitk",
   "name": "EHItk",
   "description": "Earth Hologenome Initiative ToolKit: a Python package and command-line tool for finding, summarizing, exporting, and downloading EHI specimens, hologenomes, and metagenome-assembled genomes.",
-  "version": "1.2.0",
-  "datePublished": "2026-06-27",
+  "version": "1.2.1",
+  "datePublished": "2026-06-28",
   "codeRepository": "https://github.com/earthhologenome/ehitk",
   "issueTracker": "https://github.com/earthhologenome/ehitk/issues",
   "url": "https://ehitk.readthedocs.io/",
@@ -35,6 +35,7 @@
   "author": [
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-2875-6446",
       "givenName": "Antton",
       "familyName": "Alberdi",
       "email": "antton.alberdi@sund.ku.dk"
@@ -43,6 +44,7 @@
   "maintainer": [
     {
       "@type": "Person",
+      "@id": "https://orcid.org/0000-0002-2875-6446",
       "givenName": "Antton",
       "familyName": "Alberdi",
       "email": "antton.alberdi@sund.ku.dk"

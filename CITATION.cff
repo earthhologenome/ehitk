@@ -2,8 +2,8 @@ cff-version: 1.2.0
 message: "If you use EHItk, please cite the software version you used."
 type: software
 title: "EHItk: Earth Hologenome Initiative ToolKit"
-version: "1.2.0"
-date-released: 2026-06-27
+version: "1.2.1"
+date-released: 2026-06-28
 abstract: >-
   EHItk is a Python package and command-line tool for finding, summarizing,
   exporting, and downloading Earth Hologenome Initiative specimens,
@@ -12,6 +12,7 @@ authors:
   - family-names: "Alberdi"
     given-names: "Antton"
     email: "antton.alberdi@sund.ku.dk"
+    orcid: "https://orcid.org/0000-0002-2875-6446"
 license: "GPL-3.0-only"
 repository-code: "https://github.com/earthhologenome/ehitk"
 url: "https://ehitk.readthedocs.io/"
