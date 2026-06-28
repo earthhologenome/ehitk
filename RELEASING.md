@@ -102,9 +102,9 @@ This triggers `ehitk-build`'s `data-release.yml`: it builds the catalog, emits
 under the **database** Zenodo concept DOI
 [`10.5281/zenodo.20430293`](https://doi.org/10.5281/zenodo.20430293) (record page
 <https://zenodo.org/records/20430294> — a *separate* concept from the software
-DOI), and attaches the artifact to a GitHub Release. To run it by hand, see
-`ehitk-build/RELEASING.md` (`scripts/emit_artifact.py`, `scripts/deposit_zenodo.py`;
-the deposit script is idempotent and supports `--dry-run`).
+DOI), and attaches the artifact to a GitHub Release. To run it by hand, use
+`ehitk-build --release` (or `ehitk-build --from <file>` to release an existing
+catalog); it is idempotent and supports `--dry-run`. See `ehitk-build/RELEASING.md`.
 
 ### 5. Bridge the catalog into `ehitk` (producer → consumer)
 
