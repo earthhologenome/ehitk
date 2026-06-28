@@ -1,0 +1,197 @@
+# Releasing EHItk
+
+This is the **canonical, cross-repo runbook** for shipping EHItk. It spans two
+repositories owned by the same maintainer:
+
+- **`ehitk`** (this repo) — the consumer: the Python CLI/API published to PyPI.
+  It bundles a snapshot of the metadata catalog at
+  `src/ehitk/data/ehitk.sqlite`.
+- **[`ehitk-build`](https://github.com/earthhologenome/ehitk-build)** — the
+  producer: builds `ehitk.sqlite` from Airtable. See its own
+  `RELEASING.md` for the producer-side steps; this document is the source of
+  truth for the end-to-end flow.
+
+> This runbook documents the process **as it exists today**. Steps that a later
+> automation phase will change are flagged with **(planned automation)** so the
+> manual procedure stays correct in the meantime.
+
+## Version lines
+
+EHItk tracks four independent-but-linked version lines. Keep them distinct:
+
+| Version line | Format | Lives in | Bumps when |
+| --- | --- | --- | --- |
+| `ehitk-build` semver | `X.Y.Z` | `ehitk-build` `pyproject.toml` / `__init__.py` | the generator code changes |
+| `data_version` | `YYYY.MM.DD` (calendar) | the catalog itself **(planned automation)** | the catalog is regenerated from Airtable; **this is what Zenodo tracks** |
+| `ehitk` semver | `X.Y.Z` | this repo's `pyproject.toml` | the consumer CLI/API changes |
+| `schema_version` | integer | the catalog itself **(planned automation)** | the catalog schema changes in a way that breaks the code contract |
+
+Today a loose `.sqlite` carries no internal version/metadata, so it is not
+self-identifying. The first three lines are tracked by hand (changelog, tags,
+filenames); `data_version` / `schema_version` are introduced by the planned
+automation phase.
+
+## Prerequisites
+
+- A clone of both `ehitk` and `ehitk-build` side by side.
+- `AIRTABLE_TOKEN` exported (a personal access token with read access to the EHI
+  Airtable bases). Needed only to **rebuild** the catalog.
+- Network access (the build fetches the ENVO ontology and NCBI taxonomy).
+- Release tooling installed in the `ehitk` repo:
+  `python -m pip install '.[dev,release]'`.
+- Push access to both GitHub repos and the EHItk PyPI project (publishing is via
+  Trusted Publishing in GitHub Actions, so no PyPI token is needed locally).
+
+---
+
+## Release checklist
+
+A full release usually means: new data **and** a new `ehitk` version. If you are
+only shipping code (no catalog change), skip steps 1–5 and reuse the bundled
+catalog.
+
+### 1. Refresh the Airtable source
+
+Make sure the EHI Airtable data is current and the "API view" views are correct
+in the **SE Samples (EHI Database)** and **MAGs (EHI MAG Database)** tables. The
+builder pulls exactly those views (see the `ehitk-build` README).
+
+### 2. Build the catalog (in `ehitk-build`)
+
+```bash
+cd ../ehitk-build
+export AIRTABLE_TOKEN="…"
+ehitk-build --output /tmp/ehitk.sqlite
+```
+
+This produces `ehitk.sqlite` with the data tables (`specimens`, `hologenomes`,
+`mags`), the relationship views, and the embedded ontology tables
+(`envo_descendants`, `host_taxon_descendants`). The build runs a foreign-key
+check and fails if it does not pass.
+
+- Use `--skip-ontology` only for offline/debug builds; a real release catalog
+  must include the ontology tables.
+- **(planned automation)** the build will also write a `catalog_meta` table
+  carrying `data_version`, `schema_version`, `built_with_ehitk_build`, and
+  `source_snapshot`, and the standalone artifact + Zenodo deposit will move into
+  `ehitk-build` (triggered by a `data-vYYYY.MM.DD` tag).
+
+### 3. Verify the freshly built catalog
+
+Point `ehitk` at the new file and sanity-check it before adopting it:
+
+```bash
+cd ../ehitk
+ehitk --db /tmp/ehitk.sqlite database          # path, size, SHA256
+ehitk --db /tmp/ehitk.sqlite                    # record counts per level
+ehitk --db /tmp/ehitk.sqlite specimens query --host-species "Podarcis muralis" --limit 1
+ehitk --db /tmp/ehitk.sqlite mags query --genus Escherichia --limit 1
+```
+
+Confirm the record counts and a few biome / host-taxonomy filters look right
+(those exercise the embedded descendant tables).
+
+### 4. Deposit the database to Zenodo
+
+**(planned automation — manual today.)** Deposit the standalone catalog as a new
+version under the **database** Zenodo concept DOI
+[`10.5281/zenodo.20430293`](https://doi.org/10.5281/zenodo.20430293) (record page
+<https://zenodo.org/records/20430294>). This is a *separate* concept from the
+software DOI — the database is cited independently of the Python package.
+
+Keep the deposited filename aligned with the catalog version
+(`ehitk-database-<data_version>.sqlite`) and attach its `.sha256`.
+
+### 5. Bridge the catalog into `ehitk` (producer → consumer)
+
+This is the manual hand-off that gets the freshly built catalog into the Python
+package. Copy the verified file over the bundled snapshot:
+
+```bash
+cd ../ehitk
+cp /tmp/ehitk.sqlite src/ehitk/data/ehitk.sqlite
+```
+
+Notes:
+
+- `src/ehitk/data/ehitk.sqlite` is the **canonical** bundled catalog; it ships
+  in the wheel/sdist (`package-data` in `pyproject.toml`).
+- `scripts/release.py` also supports a legacy root-level `data/ehitk.sqlite`: if
+  that file exists it is treated as the source and copied into
+  `src/ehitk/data/ehitk.sqlite` by `sync_database()`. If you keep a working copy
+  at `data/ehitk.sqlite`, update it instead and let the release script sync it;
+  otherwise update `src/ehitk/data/ehitk.sqlite` directly.
+
+### 6. Write release notes
+
+Add the user-facing changes under the `## [Unreleased]` section of
+`CHANGELOG.md` (replace the "No unreleased changes yet." placeholder). The
+release script refuses to cut a release if this section is empty or still holds
+only the placeholder.
+
+### 7. Run the release script (in `ehitk`)
+
+```bash
+python scripts/release.py <ehitk_version>            # e.g. 1.3.0
+# preview first:
+python scripts/release.py <ehitk_version> --dry-run
+```
+
+`scripts/release.py` does all of the following:
+
+- syncs the bundled DB from the legacy `data/ehitk.sqlite` if present
+  (`sync_database()`),
+- writes a standalone artifact `dist/ehitk-database-<version>.sqlite` + `.sha256`
+  (**(planned automation)** the name will switch to `data_version`, and the
+  canonical artifact + Zenodo deposit will move to `ehitk-build`),
+- bumps the version in `pyproject.toml`, `CITATION.cff`, and `codemeta.json`,
+- cuts the `[Unreleased]` changelog section into a dated release section,
+- runs `pytest`, `python -m build`, and `twine check`.
+
+Useful flags: `--skip-tests`, `--skip-build`, `--skip-twine-check`,
+`--skip-db-sync`, `--skip-db-artifact`.
+
+### 8. Commit, tag, and push
+
+```bash
+git diff                                   # review every change
+git commit -am "Release v<ehitk_version>"
+git tag v<ehitk_version>
+git push origin main
+git push origin v<ehitk_version>
+```
+
+### 9. PyPI publish (automatic)
+
+Pushing the `v*` tag triggers `.github/workflows/release.yml`: it verifies the
+packaged catalog is present, runs the tests, builds, validates, smoke-tests the
+wheel, and publishes to PyPI via Trusted Publishing. Confirm the run is green and
+the new version appears on PyPI.
+
+---
+
+## Rollback
+
+- **Bad tag, not yet on PyPI:** delete the tag locally and remotely
+  (`git tag -d v<v>` / `git push origin :refs/tags/v<v>`), fix, re-tag.
+- **Already on PyPI:** PyPI does not allow re-uploading a version. Yank the bad
+  release on PyPI and ship a new patch version with the fix. Never reuse a
+  version number.
+- **Bad catalog bundled:** restore the previous `src/ehitk/data/ehitk.sqlite`
+  from git history (`git checkout <prev> -- src/ehitk/data/ehitk.sqlite`),
+  re-run the release script, and ship a patch release.
+- **Bad Zenodo deposit:** Zenodo versions are immutable once published; publish a
+  corrected new version under the same database concept DOI rather than editing
+  in place.
+
+## Quick reference (code-only release)
+
+No catalog change → skip steps 1–5:
+
+```bash
+cd ehitk
+# edit CHANGELOG.md [Unreleased]
+python scripts/release.py <ehitk_version>
+git commit -am "Release v<ehitk_version>" && git tag v<ehitk_version>
+git push origin main && git push origin v<ehitk_version>
+```

@@ -79,9 +79,43 @@ database release artifacts.
 Versioning policy
 -----------------
 
-EHItk package versions follow Semantic Versioning for the software interface.
+EHItk separates the software it ships from the data it ships, and tracks four
+independent-but-linked version lines:
+
+``ehitk`` package version
+   Semantic Versioning for the Python software interface (CLI and API). A new
+   ``ehitk`` release may bundle a newer catalog snapshot, so upgrading the
+   package can also update the default metadata.
+
+``data_version``
+   A **calendar version** (``YYYY.MM.DD``) identifying a regeneration of the
+   metadata catalog from the upstream Airtable sources. This is the version that
+   the citable database releases and the Zenodo deposits track, independently of
+   the ``ehitk`` package version. The standalone database artifacts are named
+   ``ehitk-database-<data_version>.sqlite``.
+
+``schema_version``
+   An **integer contract** between the catalog and the code that reads it. It
+   describes the structural layout of the catalog (its tables, columns, and the
+   auxiliary ontology tables). It only changes when the schema changes in a way
+   that breaks that contract, which forces a coordinated software release that
+   understands the new layout. A given ``ehitk`` release supports a known set of
+   ``schema_version`` values and reports a clear error when asked to open a
+   catalog outside that range.
+
+``ehitk-build`` version
+   Semantic Versioning for the separate generator that builds the catalog. It is
+   recorded inside each catalog as provenance and does not affect how ``ehitk``
+   reads the data.
+
 Database updates that change the SQLite schema, remove or rename fields, or
 otherwise alter command-line or Python API output compatibility are treated as
-breaking changes and require a major version bump. Non-breaking database
-additions or metadata corrections are released as minor or patch versions and
-are documented in the changelog and associated data release notes.
+breaking changes: they bump ``schema_version`` and require a coordinated
+``ehitk`` release (a major version bump where output compatibility is affected).
+Non-breaking database additions or metadata corrections bump ``data_version``
+only and are released as minor or patch ``ehitk`` versions, documented in the
+changelog and associated data release notes.
+
+The end-to-end release procedure that coordinates these version lines across the
+``ehitk`` and ``ehitk-build`` repositories is documented in the cross-repo
+runbook at ``RELEASING.md`` in the repository root.
