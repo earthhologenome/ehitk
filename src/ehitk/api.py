@@ -30,7 +30,13 @@ from ehitk.download import (
     write_batch_script,
 )
 from ehitk.manifest import ManifestEntry, append_manifest_entry
-from ehitk.query import DEFAULT_QUERY_LIMIT, query_rows, resolve_catalog_path
+from ehitk.query import (
+    DEFAULT_QUERY_LIMIT,
+    UnsupportedSchemaVersionError,
+    query_rows,
+    resolve_catalog_path,
+    validate_catalog_schema,
+)
 from ehitk.stats import StatBreakdown, TargetStats, target_stats
 from ehitk.values import DEFAULT_VALUES_LIMIT, value_rows
 
@@ -316,12 +322,15 @@ class Database:
 
     Raises:
         FileNotFoundError: If the resolved catalog path does not exist.
+        UnsupportedSchemaVersionError: If the catalog records a ``schema_version``
+            this ehitk release cannot read.
     """
 
     def __init__(self, path: str | Path | None = None) -> None:
         self.path = resolve_catalog_path(path)
         if not self.path.exists():
             raise FileNotFoundError(f"Database does not exist: {self.path}")
+        validate_catalog_schema(self.path)
         self.specimens = SpecimenCollection(self)
         self.hologenomes = HologenomeCollection(self)
         self.mags = MagCollection(self)

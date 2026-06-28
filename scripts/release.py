@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 import re
 import shutil
+import sqlite3
 import subprocess
 import sys
 
@@ -285,12 +286,49 @@ def sync_database() -> None:
     )
 
 
+def read_catalog_data_version(catalog_path: Path) -> str | None:
+    """Return the bundled catalog's ``data_version`` from ``catalog_meta``.
+
+    Returns ``None`` for catalogs that cannot be opened or predate the
+    ``catalog_meta`` table so the caller can fall back to the ehitk version.
+    """
+    try:
+        connection = sqlite3.connect(f"file:{catalog_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return None
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'catalog_meta'"
+        ).fetchone()
+        if exists is None:
+            return None
+        row = connection.execute(
+            "SELECT value FROM catalog_meta WHERE key = 'data_version'"
+        ).fetchone()
+    except sqlite3.Error:
+        return None
+    finally:
+        connection.close()
+    return row[0] if row and row[0] else None
+
+
 def write_database_release_artifacts(version: str) -> tuple[Path, Path]:
     if not PACKAGE_DB_PATH.exists():
         raise ReleaseError(f"Packaged database not found: {PACKAGE_DB_PATH}")
     DATABASE_RELEASE_DIR.mkdir(parents=True, exist_ok=True)
 
-    artifact = DATABASE_RELEASE_DIR / f"ehitk-database-{version}.sqlite"
+    data_version = read_catalog_data_version(PACKAGE_DB_PATH)
+    if data_version:
+        artifact_version = data_version
+    else:
+        artifact_version = version
+        print(
+            "Warning: bundled catalog has no data_version in catalog_meta; "
+            f"naming the database artifact by the ehitk version ({version}). "
+            "The canonical artifact and Zenodo deposit are produced by ehitk-build."
+        )
+
+    artifact = DATABASE_RELEASE_DIR / f"ehitk-database-{artifact_version}.sqlite"
     checksum_file = DATABASE_RELEASE_DIR / f"{artifact.name}.sha256"
     shutil.copy2(PACKAGE_DB_PATH, artifact)
     checksum = file_sha256(artifact)

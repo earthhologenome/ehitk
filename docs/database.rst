@@ -22,17 +22,20 @@ a custom catalog is being used, the file size, and the SHA256 checksum.
 Versioned catalog releases
 --------------------------
 
-Each EHItk release also produces a standalone SQLite artifact named
-``ehitk-database-<version>.sqlite`` with a matching ``.sha256`` checksum file.
-Those database artifacts are intended for long-term reproducibility and for
-users who want to pin the metadata catalog independently of their installed
-Python package.
+The catalog is released as a standalone SQLite artifact named
+``ehitk-database-<data_version>.sqlite`` (a calendar ``YYYY.MM.DD`` version) with
+a matching ``.sha256`` checksum file. Those database artifacts are intended for
+long-term reproducibility and for users who want to pin the metadata catalog
+independently of their installed Python package.
 
-Database artifacts are attached to the corresponding GitHub release and are
-deposited in Zenodo as citable EHI data releases. The citable Zenodo database
-record is available at https://doi.org/10.5281/zenodo.20430293, with the current
-record page at https://zenodo.org/records/20430294. The same SQLite file is also
-included inside the matching EHItk Python package for convenience.
+The standalone artifact and its Zenodo deposit are produced by the separate
+``ehitk-build`` data generator (the producer of the catalog), while each EHItk
+Python release bundles a snapshot of the same catalog for convenience. Database
+artifacts are attached to a GitHub release and deposited in Zenodo as citable EHI
+data releases, under a database concept DOI that is distinct from the software
+DOI. The citable Zenodo database record is available at
+https://doi.org/10.5281/zenodo.20430293, with the current record page at
+https://zenodo.org/records/20430294.
 
 Embedded descendant hierarchy
 -----------------------------

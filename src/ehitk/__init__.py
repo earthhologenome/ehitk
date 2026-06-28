@@ -14,6 +14,7 @@ from ehitk.api import (
     StatBreakdown,
     Specimen,
     TargetStats,
+    UnsupportedSchemaVersionError,
     ValueCount,
     ValuesResult,
 )
@@ -27,6 +28,7 @@ __all__ = [
     "StatBreakdown",
     "Specimen",
     "TargetStats",
+    "UnsupportedSchemaVersionError",
     "ValueCount",
     "ValuesResult",
 ]

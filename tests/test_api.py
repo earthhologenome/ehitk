@@ -1,10 +1,53 @@
 import sqlite3
 
+import pytest
+
 import ehitk
 from ehitk.query import default_catalog_path
 
 
 ROOT_DB_PATH = default_catalog_path()
+
+
+def _write_catalog_meta(path, entries: dict[str, str]) -> None:
+    connection = sqlite3.connect(path)
+    connection.execute(
+        "CREATE TABLE catalog_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+    )
+    connection.executemany(
+        "INSERT INTO catalog_meta (key, value) VALUES (?, ?)",
+        list(entries.items()),
+    )
+    connection.commit()
+    connection.close()
+
+
+def test_database_rejects_unsupported_schema_version(tmp_path) -> None:
+    catalog = tmp_path / "ehitk.sqlite"
+    _write_catalog_meta(catalog, {"schema_version": "999", "data_version": "2026.06.28"})
+    with pytest.raises(ehitk.UnsupportedSchemaVersionError) as exc_info:
+        ehitk.Database(catalog)
+    message = str(exc_info.value)
+    assert "999" in message
+    assert "supported" in message.lower()
+
+
+def test_database_accepts_supported_schema_version(tmp_path) -> None:
+    catalog = tmp_path / "ehitk.sqlite"
+    _write_catalog_meta(catalog, {"schema_version": "1", "data_version": "2026.06.28"})
+    with ehitk.Database(catalog) as database:
+        assert database.path == catalog.resolve()
+
+
+def test_database_opens_legacy_catalog_without_catalog_meta(tmp_path) -> None:
+    catalog = tmp_path / "ehitk.sqlite"
+    connection = sqlite3.connect(catalog)
+    connection.execute("CREATE TABLE specimens (specimen_id TEXT)")
+    connection.commit()
+    connection.close()
+    # No catalog_meta -> treated as legacy and accepted.
+    with ehitk.Database(catalog) as database:
+        assert database.path == catalog.resolve()
 
 
 def _sample_row(sql: str) -> sqlite3.Row:

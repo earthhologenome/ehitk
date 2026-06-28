@@ -11,10 +11,6 @@ repositories owned by the same maintainer:
   `RELEASING.md` for the producer-side steps; this document is the source of
   truth for the end-to-end flow.
 
-> This runbook documents the process **as it exists today**. Steps that a later
-> automation phase will change are flagged with **(planned automation)** so the
-> manual procedure stays correct in the meantime.
-
 ## Version lines
 
 EHItk tracks four independent-but-linked version lines. Keep them distinct:
@@ -22,14 +18,14 @@ EHItk tracks four independent-but-linked version lines. Keep them distinct:
 | Version line | Format | Lives in | Bumps when |
 | --- | --- | --- | --- |
 | `ehitk-build` semver | `X.Y.Z` | `ehitk-build` `pyproject.toml` / `__init__.py` | the generator code changes |
-| `data_version` | `YYYY.MM.DD` (calendar) | the catalog itself **(planned automation)** | the catalog is regenerated from Airtable; **this is what Zenodo tracks** |
+| `data_version` | `YYYY.MM.DD` (calendar) | the catalog's `catalog_meta` table | the catalog is regenerated from Airtable; **this is what Zenodo tracks** |
 | `ehitk` semver | `X.Y.Z` | this repo's `pyproject.toml` | the consumer CLI/API changes |
-| `schema_version` | integer | the catalog itself **(planned automation)** | the catalog schema changes in a way that breaks the code contract |
+| `schema_version` | integer | the catalog's `catalog_meta` table | the catalog schema changes in a way that breaks the code contract |
 
-Today a loose `.sqlite` carries no internal version/metadata, so it is not
-self-identifying. The first three lines are tracked by hand (changelog, tags,
-filenames); `data_version` / `schema_version` are introduced by the planned
-automation phase.
+Every built catalog carries a `catalog_meta` table recording `data_version`,
+`schema_version`, `built_with_ehitk_build`, and `source_snapshot`, so a loose
+`.sqlite` is self-identifying. `ehitk` validates `schema_version` when opening a
+catalog and `ehitk database` reports `data_version` / `schema_version`.
 
 ## Prerequisites
 
@@ -65,16 +61,15 @@ ehitk-build --output /tmp/ehitk.sqlite
 ```
 
 This produces `ehitk.sqlite` with the data tables (`specimens`, `hologenomes`,
-`mags`), the relationship views, and the embedded ontology tables
-(`envo_descendants`, `host_taxon_descendants`). The build runs a foreign-key
-check and fails if it does not pass.
+`mags`), the relationship views, the embedded ontology tables
+(`envo_descendants`, `host_taxon_descendants`), and the `catalog_meta`
+provenance table. The build runs a foreign-key check and fails if it does not
+pass.
 
 - Use `--skip-ontology` only for offline/debug builds; a real release catalog
   must include the ontology tables.
-- **(planned automation)** the build will also write a `catalog_meta` table
-  carrying `data_version`, `schema_version`, `built_with_ehitk_build`, and
-  `source_snapshot`, and the standalone artifact + Zenodo deposit will move into
-  `ehitk-build` (triggered by a `data-vYYYY.MM.DD` tag).
+- Set the data version with `--data-version YYYY.MM.DD` (defaults to today). This
+  is the version Zenodo tracks and that names the database artifact.
 
 ### 3. Verify the freshly built catalog
 
@@ -91,16 +86,25 @@ ehitk --db /tmp/ehitk.sqlite mags query --genus Escherichia --limit 1
 Confirm the record counts and a few biome / host-taxonomy filters look right
 (those exercise the embedded descendant tables).
 
-### 4. Deposit the database to Zenodo
+### 4. Deposit the database to Zenodo (in `ehitk-build`)
 
-**(planned automation — manual today.)** Deposit the standalone catalog as a new
-version under the **database** Zenodo concept DOI
+The database artifact and its Zenodo deposit are owned by `ehitk-build` (the
+producer owns the data lifecycle). The automated path is a tag:
+
+```bash
+cd ../ehitk-build
+git tag data-v<data_version>          # e.g. data-v2026.06.28
+git push origin data-v<data_version>
+```
+
+This triggers `ehitk-build`'s `data-release.yml`: it builds the catalog, emits
+`ehitk-database-<data_version>.sqlite` (+ `.sha256`), deposits a **new version**
+under the **database** Zenodo concept DOI
 [`10.5281/zenodo.20430293`](https://doi.org/10.5281/zenodo.20430293) (record page
-<https://zenodo.org/records/20430294>). This is a *separate* concept from the
-software DOI — the database is cited independently of the Python package.
-
-Keep the deposited filename aligned with the catalog version
-(`ehitk-database-<data_version>.sqlite`) and attach its `.sha256`.
+<https://zenodo.org/records/20430294> — a *separate* concept from the software
+DOI), and attaches the artifact to a GitHub Release. To run it by hand, see
+`ehitk-build/RELEASING.md` (`scripts/emit_artifact.py`, `scripts/deposit_zenodo.py`;
+the deposit script is idempotent and supports `--dry-run`).
 
 ### 5. Bridge the catalog into `ehitk` (producer → consumer)
 
@@ -141,9 +145,10 @@ python scripts/release.py <ehitk_version> --dry-run
 
 - syncs the bundled DB from the legacy `data/ehitk.sqlite` if present
   (`sync_database()`),
-- writes a standalone artifact `dist/ehitk-database-<version>.sqlite` + `.sha256`
-  (**(planned automation)** the name will switch to `data_version`, and the
-  canonical artifact + Zenodo deposit will move to `ehitk-build`),
+- writes a local convenience artifact `dist/ehitk-database-<data_version>.sqlite`
+  + `.sha256`, named by the `data_version` read from the bundled catalog (falling
+  back to the ehitk version for legacy catalogs without `catalog_meta`). The
+  canonical artifact + Zenodo deposit are produced by `ehitk-build` (step 4),
 - bumps the version in `pyproject.toml`, `CITATION.cff`, and `codemeta.json`,
 - cuts the `[Unreleased]` changelog section into a dated release section,
 - runs `pytest`, `python -m build`, and `twine check`.

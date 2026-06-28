@@ -139,8 +139,32 @@ def test_database_command_reports_active_catalog() -> None:
     assert "bundled" in output
     assert "Catalog path" in output
     assert str(ROOT_DB_PATH) in output
+    assert "Data version" in output
+    assert "Schema version" in output
     assert "SHA256" in output
     assert checksum in output
+
+
+def test_database_command_reports_catalog_meta(tmp_path) -> None:
+    catalog = tmp_path / "ehitk.sqlite"
+    connection = sqlite3.connect(catalog)
+    connection.execute(
+        "CREATE TABLE catalog_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+    )
+    connection.executemany(
+        "INSERT INTO catalog_meta (key, value) VALUES (?, ?)",
+        [("data_version", "2026.06.28"), ("schema_version", "1")],
+    )
+    connection.commit()
+    connection.close()
+
+    result = runner.invoke(app, ["--db", str(catalog), "database"])
+    output = _strip_ansi(result.output)
+
+    assert result.exit_code == 0
+    assert "Data version: 2026.06.28" in output
+    assert "Schema version: 1" in output
+    assert "custom" in output
 
 
 def test_entity_help_documents_subcommands() -> None:

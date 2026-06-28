@@ -14,7 +14,7 @@ from ehitk import __version__
 from ehitk.mags.commands import app as mags_app
 from ehitk.hologenomes.commands import app as hologenomes_app
 from ehitk.specimens.commands import app as specimens_app
-from ehitk.query import resolve_catalog_path
+from ehitk.query import read_catalog_meta, resolve_catalog_path
 
 ROOT_TITLE = "Earth Hologenome Initiative ToolKit"
 ROOT_DESCRIPTION = "Query, summarize, and fetch specimens, hologenomes, and MAGs from the EHI."
@@ -122,11 +122,14 @@ def database(
         )
     default_path = resolve_catalog_path(None)
     source = "bundled" if catalog_path == default_path else "custom"
+    meta = read_catalog_meta(catalog_path)
     details = {
         "Package version": __version__,
         "Catalog source": source,
         "Catalog path": str(catalog_path),
         "Catalog size": _format_bytes(catalog_path.stat().st_size),
+        "Data version": meta.get("data_version", "unknown"),
+        "Schema version": meta.get("schema_version", "unknown"),
         "SHA256": _file_sha256(catalog_path),
     }
 

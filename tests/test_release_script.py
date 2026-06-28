@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import hashlib
 from pathlib import Path
+import sqlite3
 import sys
 
 
@@ -72,7 +73,9 @@ def test_release_changelog_moves_unreleased_section_into_new_version() -> None:
     assert "## [1.0.1] - 2026-03-18" in updated
 
 
-def test_write_database_release_artifacts_copies_catalog_and_checksum(tmp_path) -> None:
+def test_write_database_release_artifacts_falls_back_to_ehitk_version(tmp_path) -> None:
+    # A catalog without catalog_meta (here a non-sqlite blob) names the artifact
+    # by the ehitk version.
     release = _load_release_module()
     source_database = tmp_path / "ehitk.sqlite"
     source_database.write_bytes(b"sqlite catalog")
@@ -89,3 +92,24 @@ def test_write_database_release_artifacts_copies_catalog_and_checksum(tmp_path) 
     assert checksum_file.read_text(encoding="utf-8") == (
         f"{expected_checksum}  ehitk-database-1.2.3.sqlite\n"
     )
+
+
+def test_write_database_release_artifacts_names_by_data_version(tmp_path) -> None:
+    release = _load_release_module()
+    source_database = tmp_path / "ehitk.sqlite"
+    connection = sqlite3.connect(source_database)
+    connection.execute("CREATE TABLE catalog_meta (key TEXT PRIMARY KEY, value TEXT)")
+    connection.execute(
+        "INSERT INTO catalog_meta (key, value) VALUES ('data_version', '2026.06.28')"
+    )
+    connection.commit()
+    connection.close()
+    release_dir = tmp_path / "dist"
+
+    release.PACKAGE_DB_PATH = source_database
+    release.DATABASE_RELEASE_DIR = release_dir
+    artifact, checksum_file = release.write_database_release_artifacts("1.2.3")
+
+    assert artifact == release_dir / "ehitk-database-2026.06.28.sqlite"
+    assert checksum_file == release_dir / "ehitk-database-2026.06.28.sqlite.sha256"
+    assert "ehitk-database-2026.06.28.sqlite" in checksum_file.read_text(encoding="utf-8")

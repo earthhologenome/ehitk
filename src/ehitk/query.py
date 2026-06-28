@@ -20,6 +20,13 @@ ENVO_DESCENDANTS_RESOURCE = PACKAGE_DATA.joinpath("envo_descendants.json")
 HOST_TAXON_DESCENDANTS_RESOURCE = PACKAGE_DATA.joinpath("host_taxon_descendants.json")
 ENVO_DESCENDANTS_TABLE = "envo_descendants"
 HOST_TAXON_DESCENDANTS_TABLE = "host_taxon_descendants"
+CATALOG_META_TABLE = "catalog_meta"
+
+#: Catalog ``schema_version`` values this ``ehitk`` release can read. Keep in
+#: sync with ``ehitk-build``'s ``SCHEMA_VERSION``. Catalogs that predate the
+#: ``catalog_meta`` table (no recorded schema_version) are treated as compatible.
+SUPPORTED_SCHEMA_VERSIONS = frozenset({1})
+
 _RESOURCE_PATHS = ExitStack()
 atexit.register(_RESOURCE_PATHS.close)
 
@@ -77,6 +84,10 @@ _BANNED_SQL_PATTERN = re.compile(
 
 class QueryValidationError(ValueError):
     """Raised when the user-provided SQL fragment is unsafe."""
+
+
+class UnsupportedSchemaVersionError(RuntimeError):
+    """Raised when a catalog's ``schema_version`` is not supported by ehitk."""
 
 
 @dataclass(frozen=True)
@@ -475,6 +486,62 @@ def _catalog_descendant_table(catalog_path: Path, table: str) -> dict[str, tuple
     for ancestor, descendant in rows:
         mapping[str(ancestor)].append(str(descendant))
     return {key: tuple(values) for key, values in mapping.items()}
+
+
+@lru_cache(maxsize=None)
+def read_catalog_meta(catalog_path: Path) -> dict[str, str]:
+    """Return the ``catalog_meta`` key/value map embedded in a catalog.
+
+    Returns an empty mapping when the catalog cannot be opened or predates the
+    ``catalog_meta`` table (older snapshots), so callers degrade gracefully.
+    Mirrors :func:`_catalog_descendant_table`'s read-only access pattern.
+    """
+    try:
+        connection = sqlite3.connect(f"file:{catalog_path}?mode=ro", uri=True)
+    except sqlite3.Error:
+        return {}
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?",
+            (CATALOG_META_TABLE,),
+        ).fetchone()
+        if exists is None:
+            return {}
+        rows = connection.execute(
+            f'SELECT key, value FROM "{CATALOG_META_TABLE}"'
+        ).fetchall()
+    except sqlite3.Error:
+        return {}
+    finally:
+        connection.close()
+    return {str(key): str(value) for key, value in rows}
+
+
+def validate_catalog_schema(catalog_path: Path) -> None:
+    """Raise if the catalog's ``schema_version`` is unsupported by this ehitk.
+
+    Catalogs without a ``catalog_meta`` table or without a recorded
+    ``schema_version`` are treated as legacy and accepted. A present but
+    out-of-range ``schema_version`` raises a clear, actionable error.
+    """
+    meta = read_catalog_meta(catalog_path)
+    raw_version = meta.get("schema_version")
+    if raw_version is None:
+        return
+    try:
+        schema_version = int(raw_version)
+    except (TypeError, ValueError):
+        raise UnsupportedSchemaVersionError(
+            f"Catalog at {catalog_path} has an unreadable schema_version "
+            f"({raw_version!r})."
+        ) from None
+    if schema_version not in SUPPORTED_SCHEMA_VERSIONS:
+        supported = ", ".join(str(version) for version in sorted(SUPPORTED_SCHEMA_VERSIONS))
+        raise UnsupportedSchemaVersionError(
+            f"Catalog schema_version {schema_version} is not supported by this "
+            f"ehitk (supported: {supported}). Install an ehitk version that "
+            "matches the catalog, or use a catalog built for this ehitk."
+        )
 
 
 def _resolve_descendants(
