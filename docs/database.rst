@@ -37,6 +37,15 @@ DOI. The citable Zenodo database record is available at
 https://doi.org/10.5281/zenodo.20430293, with the current record page at
 https://zenodo.org/records/20430294.
 
+The published database versions (this table is generated from Zenodo by
+``scripts/update_db_list.py``):
+
+.. db-list-start
+
+No published database versions found.
+
+.. db-list-end
+
 Embedded descendant hierarchy
 -----------------------------
 

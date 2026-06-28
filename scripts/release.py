@@ -36,6 +36,9 @@ class ReleasePlan:
     run_tests: bool
     run_build: bool
     run_twine_check: bool
+    fetch_catalog: bool
+    catalog_data_version: str | None
+    update_db_list: bool
     sync_database: bool
     database_artifact: bool
     dry_run: bool
@@ -80,6 +83,27 @@ def parse_args() -> argparse.Namespace:
         help="Skip twine validation of built artifacts.",
     )
     parser.add_argument(
+        "--skip-catalog-fetch",
+        action="store_true",
+        help=(
+            "Skip fetching the catalog from Zenodo and embedding it; use the "
+            "committed src/ehitk/data/ehitk.sqlite as-is."
+        ),
+    )
+    parser.add_argument(
+        "--catalog-data-version",
+        default=None,
+        help=(
+            "Pin the Zenodo data_version to embed (default: latest published). "
+            "Has no effect with --skip-catalog-fetch."
+        ),
+    )
+    parser.add_argument(
+        "--skip-db-list",
+        action="store_true",
+        help="Skip refreshing the published database list in the README and docs.",
+    )
+    parser.add_argument(
         "--skip-db-sync",
         action="store_true",
         help="Skip legacy database synchronization checks.",
@@ -103,6 +127,9 @@ def main() -> int:
         run_tests=not args.skip_tests,
         run_build=not args.skip_build,
         run_twine_check=not args.skip_twine_check,
+        fetch_catalog=not args.skip_catalog_fetch,
+        catalog_data_version=args.catalog_data_version,
+        update_db_list=not args.skip_db_list,
         sync_database=not args.skip_db_sync,
         database_artifact=not args.skip_db_artifact,
         dry_run=args.dry_run,
@@ -127,15 +154,22 @@ def main() -> int:
         changed_files.append(CITATION_PATH.relative_to(ROOT).as_posix())
     if codemeta_before != codemeta_after:
         changed_files.append(CODEMETA_PATH.relative_to(ROOT).as_posix())
-    if plan.sync_database and database_needs_sync():
+    if plan.fetch_catalog:
+        changed_files.append(PACKAGE_DB_PATH.relative_to(ROOT).as_posix())
+    elif plan.sync_database and database_needs_sync():
         changed_files.append(PACKAGE_DB_PATH.relative_to(ROOT).as_posix())
 
     print_release_plan(plan, changed_files)
     if plan.dry_run:
         return 0
 
-    if plan.sync_database:
+    if plan.fetch_catalog:
+        fetch_catalog_from_zenodo(plan.catalog_data_version)
+    elif plan.sync_database:
         sync_database()
+
+    if plan.update_db_list:
+        update_database_list()
 
     if plan.database_artifact:
         write_database_release_artifacts(plan.version)
@@ -269,6 +303,22 @@ def database_needs_sync() -> bool:
     return LEGACY_SOURCE_DB_PATH.read_bytes() != PACKAGE_DB_PATH.read_bytes()
 
 
+def fetch_catalog_from_zenodo(data_version: str | None) -> None:
+    script = ROOT / "scripts" / "sync_catalog.py"
+    command = [sys.executable, str(script), "--output", str(PACKAGE_DB_PATH)]
+    if data_version:
+        command += ["--data-version", data_version]
+    run_command(command)
+
+
+def update_database_list() -> None:
+    script = ROOT / "scripts" / "update_db_list.py"
+    try:
+        run_command([sys.executable, str(script)])
+    except subprocess.CalledProcessError as exc:
+        print(f"Warning: database list update failed ({exc}); continuing.")
+
+
 def sync_database() -> None:
     if not PACKAGE_DB_PATH.exists():
         raise ReleaseError(f"Packaged database not found: {PACKAGE_DB_PATH}")
@@ -390,7 +440,13 @@ def run_command(command: list[str], *, shell: bool = False) -> None:
 def print_release_plan(plan: ReleasePlan, changed_files: list[str]) -> None:
     print(f"Preparing EHItk release {plan.version} ({plan.release_date})")
     print(f"- dry run: {'yes' if plan.dry_run else 'no'}")
-    print(f"- sync database: {'yes' if plan.sync_database else 'no'}")
+    if plan.fetch_catalog:
+        target = plan.catalog_data_version or "latest"
+        print(f"- fetch catalog from Zenodo: yes ({target})")
+    else:
+        print("- fetch catalog from Zenodo: no")
+    print(f"- update database list: {'yes' if plan.update_db_list else 'no'}")
+    print(f"- sync database (legacy): {'no (fetch enabled)' if plan.fetch_catalog else ('yes' if plan.sync_database else 'no')}")
     print(f"- run tests: {'yes' if plan.run_tests else 'no'}")
     print(f"- run build: {'yes' if plan.run_build else 'no'}")
     print(f"- run twine check: {'yes' if plan.run_twine_check else 'no'}")

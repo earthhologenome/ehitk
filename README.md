@@ -77,13 +77,23 @@ Use `ehitk database` to inspect the catalog currently in use, including its
 path, source, size, and SHA256 checksum.
 
 Database updates are paired with documented EHI data releases. Each release
-produces a standalone `ehitk-database-<version>.sqlite` artifact and checksum
-file for GitHub Releases and Zenodo, while the same SQLite file remains bundled
-inside the matching Python package for convenience. The citable Zenodo database
-record is available at https://doi.org/10.5281/zenodo.20430293. Older database
-files can be used to rerun analyses against the same database version by passing
-the file with `--db` or by opening it with
+produces a standalone `ehitk-database-<data_version>.sqlite` artifact and
+checksum file for GitHub Releases and Zenodo, while the same SQLite file remains
+bundled inside the matching Python package for convenience. The citable Zenodo
+database record is available at https://doi.org/10.5281/zenodo.20430293. Older
+database files can be used to rerun analyses against the same database version by
+passing the file with `--db` or by opening it with
 `ehitk.Database("/path/to/ehitk.sqlite")`.
+
+Published database versions (generated from Zenodo by
+`scripts/update_db_list.py`):
+
+<!-- db-list-start -->
+
+_No published database versions found._
+
+<!-- db-list-end -->
+
 
 The public package does not currently rebuild the full curated EHI metadata
 catalog from upstream sources. Fresh catalogs are obtained by upgrading EHItk or

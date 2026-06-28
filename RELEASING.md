@@ -108,23 +108,31 @@ catalog); it is idempotent and supports `--dry-run`. See `ehitk-build/RELEASING.
 
 ### 5. Bridge the catalog into `ehitk` (producer → consumer)
 
-This is the manual hand-off that gets the freshly built catalog into the Python
-package. Copy the verified file over the bundled snapshot:
+The bridge is automated: `scripts/release.py` (step 7) fetches the latest
+published catalog from Zenodo and writes it to `src/ehitk/data/ehitk.sqlite`, so
+the bundled snapshot is always a citable, checksum-verified record. You normally
+do **nothing** here — just make sure step 4 published the version you want to
+ship before running the release script.
+
+To preview or run the fetch on its own:
 
 ```bash
 cd ../ehitk
-cp /tmp/ehitk.sqlite src/ehitk/data/ehitk.sqlite
+python scripts/sync_catalog.py --dry-run                 # show which version would be embedded
+python scripts/sync_catalog.py                           # embed the latest published catalog
+python scripts/sync_catalog.py --data-version <data_version>   # pin an older release
 ```
 
 Notes:
 
+- The fetch refuses to embed a catalog whose `schema_version` this `ehitk`
+  cannot read — bump `SUPPORTED_SCHEMA_VERSIONS` and the readers first, or pin a
+  compatible `--data-version`.
 - `src/ehitk/data/ehitk.sqlite` is the **canonical** bundled catalog; it ships
-  in the wheel/sdist (`package-data` in `pyproject.toml`).
-- `scripts/release.py` also supports a legacy root-level `data/ehitk.sqlite`: if
-  that file exists it is treated as the source and copied into
-  `src/ehitk/data/ehitk.sqlite` by `sync_database()`. If you keep a working copy
-  at `data/ehitk.sqlite`, update it instead and let the release script sync it;
-  otherwise update `src/ehitk/data/ehitk.sqlite` directly.
+  in the wheel/sdist and is committed so source/editable installs work offline.
+- For an offline or code-only release, pass `--skip-catalog-fetch` to keep the
+  committed snapshot as-is. The legacy `sync_database()` path (root-level
+  `data/ehitk.sqlite`) is only used when the Zenodo fetch is skipped.
 
 ### 6. Write release notes
 
@@ -143,17 +151,21 @@ python scripts/release.py <ehitk_version> --dry-run
 
 `scripts/release.py` does all of the following:
 
-- syncs the bundled DB from the legacy `data/ehitk.sqlite` if present
-  (`sync_database()`),
+- fetches the latest published catalog from Zenodo and embeds it at
+  `src/ehitk/data/ehitk.sqlite` (`--catalog-data-version` to pin, or
+  `--skip-catalog-fetch` to keep the committed snapshot; the legacy
+  `sync_database()` is the fallback when the fetch is skipped),
+- refreshes the published database list in the README and docs
+  (`scripts/update_db_list.py`; best-effort — skipped with `--skip-db-list`),
 - writes a local convenience artifact `dist/ehitk-database-<data_version>.sqlite`
-  + `.sha256`, named by the `data_version` read from the bundled catalog (falling
-  back to the ehitk version for legacy catalogs without `catalog_meta`). The
+  + `.sha256`, named by the `data_version` read from the bundled catalog. The
   canonical artifact + Zenodo deposit are produced by `ehitk-build` (step 4),
 - bumps the version in `pyproject.toml`, `CITATION.cff`, and `codemeta.json`,
 - cuts the `[Unreleased]` changelog section into a dated release section,
 - runs `pytest`, `python -m build`, and `twine check`.
 
 Useful flags: `--skip-tests`, `--skip-build`, `--skip-twine-check`,
+`--skip-catalog-fetch`, `--catalog-data-version`, `--skip-db-list`,
 `--skip-db-sync`, `--skip-db-artifact`.
 
 ### 8. Commit, tag, and push
