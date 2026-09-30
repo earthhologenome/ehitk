@@ -7,7 +7,7 @@ repositories owned by the same maintainer:
   It bundles a snapshot of the metadata catalog at
   `src/ehitk/data/ehitk.sqlite`.
 - **[`ehitk-build`](https://github.com/earthhologenome/ehitk-build)** — the
-  producer: builds `ehitk.sqlite` from Airtable. See its own
+  producer: builds `ehitk.sqlite` from ehi-core, the EHI system of record. See its own
   `RELEASING.md` for the producer-side steps; this document is the source of
   truth for the end-to-end flow.
 
@@ -18,7 +18,7 @@ EHItk tracks four independent-but-linked version lines. Keep them distinct:
 | Version line | Format | Lives in | Bumps when |
 | --- | --- | --- | --- |
 | `ehitk-build` semver | `X.Y.Z` | `ehitk-build` `pyproject.toml` / `__init__.py` | the generator code changes |
-| `data_version` | `YYYY.MM.DD` (calendar) | the catalog's `catalog_meta` table | the catalog is regenerated from Airtable; **this is what Zenodo tracks** |
+| `data_version` | `YYYY.MM.DD` (calendar) | the catalog's `catalog_meta` table | the catalog is regenerated from ehi-core; **this is what Zenodo tracks** |
 | `ehitk` semver | `X.Y.Z` | this repo's `pyproject.toml` | the consumer CLI/API changes |
 | `schema_version` | integer | the catalog's `catalog_meta` table | the catalog schema changes in a way that breaks the code contract |
 
@@ -30,8 +30,9 @@ catalog and `ehitk database` reports `data_version` / `schema_version`.
 ## Prerequisites
 
 - A clone of both `ehitk` and `ehitk-build` side by side.
-- `AIRTABLE_TOKEN` exported (a personal access token with read access to the EHI
-  Airtable bases). Needed only to **rebuild** the catalog.
+- `EHI_CORE_CATALOG_TOKEN` exported (ehi-core's catalogue token, the
+  `core-catalog-token` secret; the pipeline token is refused). Needed only to
+  **rebuild** the catalog.
 - Network access (the build fetches the ENVO ontology and NCBI taxonomy).
 - Release tooling installed in the `ehitk` repo:
   `python -m pip install '.[dev,release]'`.
@@ -46,17 +47,19 @@ A full release usually means: new data **and** a new `ehitk` version. If you are
 only shipping code (no catalog change), skip steps 1–5 and reuse the bundled
 catalog.
 
-### 1. Refresh the Airtable source
+### 1. Refresh the ehi-core source
 
-Make sure the EHI Airtable data is current and the "API view" views are correct
-in the **SE Samples (EHI Database)** and **MAGs (EHI MAG Database)** tables. The
-builder pulls exactly those views (see the `ehitk-build` README).
+Make sure ehi-core is current: the hologenomes and MAGs to publish are assigned
+to a data release, and that release is **Released** if their download URLs
+should be included. The builder pulls ehi-core's catalogue export and keeps
+every specimen plus the hologenomes and MAGs assigned to a release (see the
+`ehitk-build` README).
 
 ### 2. Build the catalog (in `ehitk-build`)
 
 ```bash
 cd ../ehitk-build
-export AIRTABLE_TOKEN="…"
+export EHI_CORE_CATALOG_TOKEN="…"
 ehitk-build --output /tmp/ehitk.sqlite
 ```
 

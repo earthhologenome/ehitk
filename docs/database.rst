@@ -104,7 +104,7 @@ independent-but-linked version lines:
 
 ``data_version``
    A **calendar version** (``YYYY.MM.DD``) identifying a regeneration of the
-   metadata catalog from the upstream Airtable sources. This is the version that
+   metadata catalog from ehi-core, the EHI system of record. This is the version that
    the citable database releases and the Zenodo deposits track, independently of
    the ``ehitk`` package version. The standalone database artifacts are named
    ``ehitk-database-<data_version>.sqlite``.

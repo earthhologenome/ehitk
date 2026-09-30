@@ -6,9 +6,15 @@ The format follows Keep a Changelog principles and the project versions follow S
 
 ## [Unreleased]
 
-### Added
+### Changed
 
-- No unreleased changes yet.
+- The metadata catalog is now built from ehi-core, the EHI system of record,
+  instead of the Airtable bases it replaces. The catalog layout is unchanged
+  (`schema_version` 1), so no code or query changes are needed. Values follow
+  the curated core records, so some differ from earlier catalogs: for example
+  host taxonomy (`Caudata` rather than `Urodela`), country names (`USA` rather
+  than `United States`), and read URLs, which are listed only once a data
+  release is released.
 
 ## [1.2.1] - 2026-06-28
 
